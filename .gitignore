@@ -1,4 +1,4 @@
-/dmshx.exe
-/dmshx-linux
-/dmshx-arm
 /logs/
+/dmshx-linux-arm64
+/dmshx-linux-x86_64
+/dmshx-windows-x86_64.exe

@@ -14,21 +14,21 @@ set LDFLAGS=-ldflags "%OPT_FLAGS% -X dmshx/pkg.Version=%VERSION% -X 'dmshx/pkg.B
 echo Building for Linux x86_64...
 set GOOS=linux
 set GOARCH=amd64
-go build %LDFLAGS% -trimpath -o dmshx-linux ./cmd/dmshx
+go build %LDFLAGS% -trimpath -o dmshx-linux-x86_64 ./cmd/dmshx
 
 echo Building for Linux ARM64...
 set GOOS=linux
 set GOARCH=arm64
-go build %LDFLAGS% -trimpath -o dmshx-arm ./cmd/dmshx
+go build %LDFLAGS% -trimpath -o dmshx-linux-arm64 ./cmd/dmshx
 
 echo Building for Windows x86_64...
 set GOOS=windows
 set GOARCH=amd64
-go build %LDFLAGS% -trimpath -o dmshx.exe ./cmd/dmshx
+go build %LDFLAGS% -trimpath -o dmshx-windows-x86_64.exe ./cmd/dmshx
 
 echo Build completed successfully!
 echo.
 echo The following binaries have been created:
-echo - dmshx-linux (Linux x86_64)
-echo - dmshx-arm (Linux ARM64)
-echo - dmshx.exe (Windows x86_64) 
+echo - dmshx-linux-x86_64 (Linux x86_64)
+echo - dmshx-linux-arm64 (Linux ARM64)
+echo - dmshx-windows-x86_64.exe (Windows x86_64) 

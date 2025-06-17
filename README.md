@@ -31,9 +31,9 @@ DMSHX (D(M) + (S)SH + (H)ost e(X)ecutor) 是一个跨平台、零依赖的命令
 
 ### 下载预编译版本
 从[Releases](https://github.com/yourusername/dmshx/releases)页面下载适合您平台的可执行文件：
-- Windows: `dmshx.exe`
-- Linux x86_64: `dmshx-linux`
-- Linux ARM64: `dmshx-arm`
+- Windows x86_64: `dmshx-windows-x86_64.exe`
+- Linux x86_64: `dmshx-linux-x86_64`
+- Linux ARM64: `dmshx-linux-arm64`
 
 ### 从源码编译
 需要Go 1.19或更高版本。
@@ -53,11 +53,11 @@ go build -o dmshx ./cmd/dmshx
 
 ### 优化可执行文件大小
 
-默认编译的Go程序通常较大，这是因为它们是静态链接的。build_dmshx.ps1脚本已包含以下优化：
+默认编译的Go程序通常较大，这是因为它们是静态链接的。build_dmshx.bat脚本已包含以下优化：
 
 1. 使用 `-ldflags "-s -w"` 移除调试信息和符号表
 2. 使用 `-trimpath` 移除编译路径信息
-3. 使用 UPX 工具进行可执行文件压缩（需单独安装）
+3. 支持UPX工具进行可执行文件压缩（需单独安装）
 
 如果需要进一步减小文件大小，可以手动安装 UPX 工具：
 1. 从 [UPX官网](https://github.com/upx/upx/releases) 下载适合您系统的版本
@@ -104,6 +104,12 @@ dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -log
 
 # 启用命令执行日志记录并设置保留天数
 dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -enable-command-log -log-retention 30
+
+# 显示版本信息（使用短参数）
+dmshx -v
+
+# 显示版本信息（使用完整参数）
+dmshx -version
 ```
 
 ## 命令行参数说明
@@ -128,7 +134,7 @@ dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -ena
 | -sql | string | "" | 要执行的SQL查询语句，例如 "SELECT * FROM V$INSTANCE" |
 | -json-output | bool | true | 是否以JSON格式输出结果，便于程序解析，默认开启 |
 | -log-file | string | "" | 执行结果输出日志文件路径，若指定则同时输出到屏幕和文件 |
-| -version | bool | false | 显示程序版本号、构建时间、作者和构建日期信息 |
+| -version, -v | bool | false | 显示程序版本号、构建时间、作者和构建日期信息 |
 | -enable-command-log | bool | true | 是否启用命令执行日志记录功能，默认开启 |
 | -command-log-path | string | "./logs" | 命令执行日志存储目录 |
 | -log-retention | int | 7 | 日志文件保留天数，超过此天数的日志将被自动清理 |
