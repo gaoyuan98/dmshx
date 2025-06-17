@@ -79,7 +79,17 @@ func (l *Logger) LogCommand(result *pkg.CmdResult) {
 	fmt.Fprintf(logFile, "执行时间: %s\n", result.Timestamp)
 	fmt.Fprintf(logFile, "命令类型: SSH\n")
 	fmt.Fprintf(logFile, "目标主机: %s\n", result.Host)
-	fmt.Fprintf(logFile, "执行命令: %s\n", l.config.Cmd)
+	fmt.Fprintf(logFile, "SSH用户: %s\n", result.SSHUser)
+	if result.ExecUser != result.SSHUser {
+		fmt.Fprintf(logFile, "执行用户: %s\n", result.ExecUser)
+	}
+	fmt.Fprintf(logFile, "原始命令: %s\n", l.config.Cmd)
+
+	// 如果有实际执行命令（可能是包装后的命令）
+	if result.ActualCmd != "" && result.ActualCmd != l.config.Cmd {
+		fmt.Fprintf(logFile, "实际命令: %s\n", result.ActualCmd)
+	}
+
 	fmt.Fprintf(logFile, "执行状态: %s\n", result.Status)
 	fmt.Fprintf(logFile, "执行耗时: %s\n", result.Duration)
 	fmt.Fprintf(logFile, "标准输出:\n%s\n", result.Stdout)
@@ -132,6 +142,11 @@ func (l *Logger) LogSQL(result *pkg.SQLResult) {
 	fmt.Fprintf(logFile, "命令类型: SQL (%s)\n", result.DB)
 	fmt.Fprintf(logFile, "目标主机: %s\n", result.Host)
 	fmt.Fprintf(logFile, "执行SQL: %s\n", l.config.SQL)
+
+	if result.TimeoutSetting != "" {
+		fmt.Fprintf(logFile, "超时设置: %s\n", result.TimeoutSetting)
+	}
+
 	fmt.Fprintf(logFile, "执行状态: %s\n", result.Status)
 	fmt.Fprintf(logFile, "执行耗时: %s\n", result.Duration)
 

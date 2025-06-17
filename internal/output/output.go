@@ -18,6 +18,16 @@ import (
 
 // OutputCmdResult 输出命令执行结果
 func OutputCmdResult(host, status, stdout, stderr, cmdType, duration, errMsg string, jsonOutput bool, writer io.Writer) {
+	OutputCmdResultWithUsers(host, status, stdout, stderr, cmdType, duration, errMsg, "", "", jsonOutput, writer)
+}
+
+// OutputCmdResultWithUsers 输出带有用户信息的命令执行结果
+func OutputCmdResultWithUsers(host, status, stdout, stderr, cmdType, duration, errMsg, sshUser, execUser string, jsonOutput bool, writer io.Writer) {
+	OutputCmdResultFull(host, status, stdout, stderr, cmdType, duration, errMsg, sshUser, execUser, "", jsonOutput, writer)
+}
+
+// OutputCmdResultFull 输出完整的命令执行结果，包括实际执行的命令
+func OutputCmdResultFull(host, status, stdout, stderr, cmdType, duration, errMsg, sshUser, execUser, actualCmd string, jsonOutput bool, writer io.Writer) {
 	result := pkg.CmdResult{
 		Host:      host,
 		Type:      cmdType,
@@ -26,6 +36,9 @@ func OutputCmdResult(host, status, stdout, stderr, cmdType, duration, errMsg str
 		Stderr:    stderr,
 		Duration:  duration,
 		Timestamp: time.Now().Format("2006-01-02 15:04:05"),
+		SSHUser:   sshUser,
+		ExecUser:  execUser,
+		ActualCmd: actualCmd,
 	}
 
 	if errMsg != "" {
@@ -40,8 +53,24 @@ func OutputCmdResult(host, status, stdout, stderr, cmdType, duration, errMsg str
 		}
 		fmt.Fprintln(writer, string(jsonData))
 	} else {
-		fmt.Fprintf(writer, "Host: %s\nType: %s\nStatus: %s\nTimestamp: %s\nStdout: %s\nStderr: %s\nDuration: %s\n",
-			result.Host, result.Type, result.Status, result.Timestamp, result.Stdout, result.Stderr, result.Duration)
+		fmt.Fprintf(writer, "Host: %s\nType: %s\nStatus: %s\nTimestamp: %s\n",
+			result.Host, result.Type, result.Status, result.Timestamp)
+
+		if result.SSHUser != "" {
+			fmt.Fprintf(writer, "SSH用户: %s\n", result.SSHUser)
+		}
+
+		if result.ExecUser != "" && result.ExecUser != result.SSHUser {
+			fmt.Fprintf(writer, "执行用户: %s\n", result.ExecUser)
+		}
+
+		if result.ActualCmd != "" {
+			fmt.Fprintf(writer, "实际命令: %s\n", result.ActualCmd)
+		}
+
+		fmt.Fprintf(writer, "Stdout: %s\nStderr: %s\nDuration: %s\n",
+			result.Stdout, result.Stderr, result.Duration)
+
 		if errMsg != "" {
 			fmt.Fprintf(writer, "Error: %s\n", errMsg)
 		}
@@ -50,14 +79,20 @@ func OutputCmdResult(host, status, stdout, stderr, cmdType, duration, errMsg str
 
 // OutputSQLResult 输出SQL执行结果
 func OutputSQLResult(host, status, dbType string, rows []interface{}, duration, errMsg string, jsonOutput bool, writer io.Writer) {
+	OutputSQLResultWithTimeout(host, status, dbType, rows, duration, errMsg, "", jsonOutput, writer)
+}
+
+// OutputSQLResultWithTimeout 输出带有超时设置信息的SQL执行结果
+func OutputSQLResultWithTimeout(host, status, dbType string, rows []interface{}, duration, errMsg, timeoutSetting string, jsonOutput bool, writer io.Writer) {
 	result := pkg.SQLResult{
-		Host:      host,
-		Type:      "sql",
-		DB:        dbType,
-		Status:    status,
-		Rows:      rows,
-		Duration:  duration,
-		Timestamp: time.Now().Format("2006-01-02 15:04:05"),
+		Host:           host,
+		Type:           "sql",
+		DB:             dbType,
+		Status:         status,
+		Rows:           rows,
+		Duration:       duration,
+		Timestamp:      time.Now().Format("2006-01-02 15:04:05"),
+		TimeoutSetting: timeoutSetting,
 	}
 
 	if errMsg != "" {
@@ -72,8 +107,15 @@ func OutputSQLResult(host, status, dbType string, rows []interface{}, duration, 
 		}
 		fmt.Fprintln(writer, string(jsonData))
 	} else {
-		fmt.Fprintf(writer, "Host: %s\nType: sql\nDB: %s\nStatus: %s\nTimestamp: %s\nDuration: %s\n",
-			result.Host, result.DB, result.Status, result.Timestamp, result.Duration)
+		fmt.Fprintf(writer, "Host: %s\nType: sql\nDB: %s\nStatus: %s\nTimestamp: %s\n",
+			result.Host, result.DB, result.Status, result.Timestamp)
+
+		if result.TimeoutSetting != "" {
+			fmt.Fprintf(writer, "超时设置: %s\n", result.TimeoutSetting)
+		}
+
+		fmt.Fprintf(writer, "Duration: %s\n", result.Duration)
+
 		if len(rows) > 0 {
 			fmt.Fprintf(writer, "Rows: %d\n", len(rows))
 			for i, row := range rows {

@@ -115,13 +115,15 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 			session, err := client.NewSession()
 			if err != nil {
 				result := &pkg.CmdResult{
-					Host:   host,
-					Type:   "cmd",
-					Status: "error",
-					Error:  err.Error(),
+					Host:     host,
+					Type:     "cmd",
+					Status:   "error",
+					Error:    err.Error(),
+					SSHUser:  config.User,
+					ExecUser: config.User,
 				}
 				cmdLogger.LogCommand(result)
-				output.OutputCmdResult(host, "error", "", "", "cmd", "0s", err.Error(), config.JSONOutput, logWriter)
+				output.OutputCmdResultFull(host, "error", "", "", "cmd", "0s", err.Error(), config.User, config.User, "", config.JSONOutput, logWriter)
 				return
 			}
 			defer session.Close()
@@ -131,17 +133,30 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 			session.Stdout = &stdout
 			session.Stderr = &stderr
 
+			// 处理命令，如果设置了ExecUser，则切换用户执行
+			cmdToExecute := config.Cmd
+			execUser := config.User // 默认执行用户与SSH用户相同
+
+			if config.ExecUser != "" && config.ExecUser != config.User {
+				// 使用su切换用户执行命令
+				cmdToExecute = fmt.Sprintf("su - %s -c '%s'", config.ExecUser, escapeCommand(config.Cmd))
+				execUser = config.ExecUser // 更新实际执行用户
+			}
+
 			// 执行命令
-			err = session.Start(config.Cmd)
+			err = session.Start(cmdToExecute)
 			if err != nil {
 				result := &pkg.CmdResult{
-					Host:   host,
-					Type:   "cmd",
-					Status: "error",
-					Error:  err.Error(),
+					Host:      host,
+					Type:      "cmd",
+					Status:    "error",
+					Error:     err.Error(),
+					SSHUser:   config.User,
+					ExecUser:  execUser,
+					ActualCmd: cmdToExecute,
 				}
 				cmdLogger.LogCommand(result)
-				output.OutputCmdResult(host, "error", "", "", "cmd", "0s", err.Error(), config.JSONOutput, logWriter)
+				output.OutputCmdResultFull(host, "error", "", "", "cmd", "0s", err.Error(), config.User, execUser, cmdToExecute, config.JSONOutput, logWriter)
 				return
 			}
 
@@ -152,12 +167,18 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 			}()
 
 			var cmdErr error
-			select {
-			case cmdErr = <-done:
-				// 命令正常完成
-			case <-time.After(time.Duration(config.Timeout) * time.Second):
-				session.Signal(ssh.SIGTERM)
-				cmdErr = fmt.Errorf("command timed out after %d seconds", config.Timeout)
+			// 只有当超时设置大于0时才设置超时
+			if config.Timeout > 0 {
+				select {
+				case cmdErr = <-done:
+					// 命令正常完成
+				case <-time.After(time.Duration(config.Timeout) * time.Second):
+					session.Signal(ssh.SIGTERM)
+					cmdErr = fmt.Errorf("command timed out after %d seconds", config.Timeout)
+				}
+			} else {
+				// 超时为0表示不限制超时时间
+				cmdErr = <-done
 			}
 
 			duration := time.Since(startTime).String()
@@ -171,21 +192,30 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 
 			// 创建命令执行结果
 			result := &pkg.CmdResult{
-				Host:     host,
-				Type:     "cmd",
-				Status:   status,
-				Stdout:   stdout.String(),
-				Stderr:   stderr.String(),
-				Duration: duration,
-				Error:    errMsg,
+				Host:      host,
+				Type:      "cmd",
+				Status:    status,
+				Stdout:    stdout.String(),
+				Stderr:    stderr.String(),
+				Duration:  duration,
+				Error:     errMsg,
+				SSHUser:   config.User,
+				ExecUser:  execUser,
+				ActualCmd: cmdToExecute,
 			}
 
 			// 记录命令执行日志
 			cmdLogger.LogCommand(result)
 
-			output.OutputCmdResult(host, status, stdout.String(), stderr.String(), "cmd", duration, errMsg, config.JSONOutput, logWriter)
+			output.OutputCmdResultFull(host, status, stdout.String(), stderr.String(), "cmd", duration, errMsg, config.User, execUser, cmdToExecute, config.JSONOutput, logWriter)
 		}(host)
 	}
 
 	wg.Wait()
+}
+
+// escapeCommand 转义命令中的单引号
+func escapeCommand(cmd string) string {
+	// 替换单引号为 '\''
+	return strings.ReplaceAll(cmd, "'", "'\\''")
 }

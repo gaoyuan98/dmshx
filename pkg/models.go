@@ -27,6 +27,7 @@ type Config struct {
 	Password string
 	Cmd      string
 	Timeout  int
+	ExecUser string // 执行命令的用户，如果设置，将使用su切换到该用户执行命令
 
 	// 数据库相关参数
 	DBType string
@@ -58,16 +59,20 @@ type CmdResult struct {
 	Duration  string `json:"duration"`
 	Error     string `json:"error,omitempty"`
 	Timestamp string `json:"timestamp"`
+	SSHUser   string `json:"ssh_user,omitempty"`   // SSH连接使用的用户
+	ExecUser  string `json:"exec_user,omitempty"`  // 实际执行命令的用户
+	ActualCmd string `json:"actual_cmd,omitempty"` // 实际执行的命令（可能是经过转换的）
 }
 
 // SQLResult SQL执行结果
 type SQLResult struct {
-	Host      string        `json:"host"`
-	Type      string        `json:"type"`
-	DB        string        `json:"db"`
-	Status    string        `json:"status"`
-	Rows      []interface{} `json:"rows"`
-	Duration  string        `json:"duration"`
-	Error     string        `json:"error,omitempty"`
-	Timestamp string        `json:"timestamp"`
+	Host           string        `json:"host"`
+	Type           string        `json:"type"`
+	DB             string        `json:"db"`
+	Status         string        `json:"status"`
+	Rows           []interface{} `json:"rows"`
+	Duration       string        `json:"duration"`
+	Error          string        `json:"error,omitempty"`
+	Timestamp      string        `json:"timestamp"`
+	TimeoutSetting string        `json:"timeout_setting,omitempty"` // 超时设置信息
 }

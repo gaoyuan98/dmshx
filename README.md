@@ -81,16 +81,22 @@ dmshx -hosts "192.168.1.10,192.168.1.11:2222" -user "root" -key "/path/to/id_rsa
 
 # 从文件读取主机列表
 dmshx -host-file "hosts.txt" -user "admin" -password "password" -cmd "uptime"
+
+# 以root用户连接，但以dmdba用户执行命令
+dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -password "rootpassword" -cmd "cat /opt/dmdata/5236/DMDB/dm.ini" -exec-user "dmdba"
 ```
 
 ### SQL查询执行
 
 ```bash
 # 达梦数据库查询
-dmshx -db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM V$INSTANCE"
+dmshx -db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM V$INSTANCE" -timeout 60
 
 # 设置查询超时
 dmshx -db-type "dm" -db-host "192.168.1.20" -db-user "SYSDBA" -db-pass "SYSDBA" -sql "SELECT * FROM LARGE_TABLE" -timeout 60
+
+# 执行不限制超时的查询（适用于大型报表查询）
+dmshx -db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM LARGE_TABLE JOIN ANOTHER_TABLE" -timeout 0
 ```
 
 ### 输出格式控制
@@ -125,6 +131,7 @@ dmshx -version
 | -password | string | "" | SSH登录密码，仅在未提供私钥时使用（不推荐在生产环境直接使用） |
 | -cmd | string | "" | 在远程主机执行的Shell命令，例如 "ls -la /opt" 或 "cat /etc/hosts" |
 | -timeout | int | 30 | 命令或SQL执行超时时间，单位为秒，超时后会终止执行 |
+| -exec-user | string | "" | 执行命令的用户，如果设置且与SSH登录用户不同，将使用su切换到该用户执行命令 |
 | -db-type | string | "" | 数据库类型，当前支持 "dm"（达梦数据库），未来计划支持 "oracle" |
 | -db-host | string | "" | 数据库服务器主机名或IP地址 |
 | -db-port | int | 0 | 数据库服务端口，达梦数据库默认为5236 |
@@ -157,7 +164,10 @@ dmshx支持两种输出格式：JSON格式（默认）和文本格式。所有�
   "stderr": "",
   "duration": "2.45s",
   "timestamp": "2025-06-17 08:45:12",
-  "error": ""
+  "error": "",
+  "ssh_user": "root",
+  "exec_user": "dmdba",
+  "actual_cmd": "su - dmdba -c 'ls -la'"
 }
 ```
 
@@ -214,7 +224,8 @@ dmshx支持两种输出格式：JSON格式（默认）和文本格式。所有�
   ],
   "duration": "0.91s",
   "timestamp": "2025-06-17 08:45:12",
-  "error": ""
+  "error": "",
+  "timeout_setting": "30秒"
 }
 ```
 
@@ -316,6 +327,9 @@ Error: table or view does not exist: NONEXISTENT_TABLE
 | `status` | string | 执行状态，"success"表示成功，"error"表示失败 |
 | `duration` | string | 执行耗时，格式为"Xs"（如"2.45s"） |
 | `timestamp` | string | 执行完成时间戳，格式为"YYYY-MM-DD HH:MM:SS" |
+| `ssh_user` | string | SSH连接使用的用户名 |
+| `exec_user` | string | 实际执行命令的用户名，当使用-exec-user参数时会与ssh_user不同 |
+| `actual_cmd` | string | 实际执行的命令字符串，当使用-exec-user参数时会与原始命令不同 |
 
 #### SSH命令执行特有字段
 
@@ -332,6 +346,7 @@ Error: table or view does not exist: NONEXISTENT_TABLE
 | `db` | string | 数据库类型，如"dm"、"oracle" |
 | `rows` | array | 查询结果行数组，每行为一个对象，键为列名，值为列值 |
 | `error` | string | 查询过程中的错误信息（仅在失败时存在） |
+| `timeout_setting` | string | 执行SQL查询的超时设置，如"30秒"或"无限制" |
 
 ### 多主机并发执行
 
@@ -384,9 +399,12 @@ dmshx对不同类型的错误提供详细的错误信息：
 
 日志内容格式:
 执行时间: 2023-06-17 08:45:12
-命令类型: SSH/SQL
+命令类型: SSH
 目标主机: 192.168.1.10
-执行命令: ls -la
+SSH用户: root
+执行用户: dmdba  (仅当与SSH用户不同时显示)
+原始命令: ls -la
+实际命令: su - dmdba -c 'ls -la'  (仅当与原始命令不同时显示)
 执行状态: 成功/失败
 执行耗时: 2.45s
 执行结果: ...
@@ -415,3 +433,17 @@ dmshx -db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -
 ```bash
 dmshx -host-file "production_servers.txt" -user "ops" -password "secure_pass" -cmd "systemctl status nginx" -timeout 60
 ```
+
+4. 以root用户连接但以dmdba用户执行命令：
+```bash
+dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ps -ef | grep dms" -exec-user "dmdba"
+```
+
+这种方式实际执行的命令是：`su - dmdba -c 'ps -ef | grep dms'`，适用于需要以特定用户身份执行命令的场景，例如操作达梦数据库时需要使用dmdba用户权限。
+
+5. 设置超时时间为0（不限制超时）：
+```bash
+dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "tar -czf backup.tar.gz /opt/dmdata" -timeout 0
+```
+
+这种设置适用于执行时间不可预测的长时间运行命令，如备份、大文件传输等。

@@ -30,6 +30,7 @@ func Parse() *pkg.Config {
 	flag.StringVar(&config.Password, "password", "", "SSH password")
 	flag.StringVar(&config.Cmd, "cmd", "", "Command to execute on remote hosts")
 	flag.IntVar(&config.Timeout, "timeout", 30, "Command or SQL execution timeout in seconds")
+	flag.StringVar(&config.ExecUser, "exec-user", "", "User to execute the command as (if different from SSH user)")
 
 	// 数据库相关参数
 	flag.StringVar(&config.DBType, "db-type", "", "Database type: dm or oracle")

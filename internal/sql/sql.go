@@ -80,14 +80,31 @@ func ExecuteQuery(config *pkg.Config, logWriter io.Writer, cmdLogger *logger.Log
 			Status: "error",
 			Error:  err.Error(),
 		}
+
+		// 设置超时信息
+		if config.Timeout > 0 {
+			result.TimeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+		} else {
+			result.TimeoutSetting = "无限制"
+		}
+
 		cmdLogger.LogSQL(result)
-		output.OutputSQLResult(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), config.JSONOutput, logWriter)
+		output.OutputSQLResultWithTimeout(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), result.TimeoutSetting, config.JSONOutput, logWriter)
 		return
 	}
 	defer db.Close()
 
 	// 设置超时
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.Timeout)*time.Second)
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	// 只有当超时设置大于0时才设置超时
+	if config.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), time.Duration(config.Timeout)*time.Second)
+	} else {
+		// 超时为0表示不限制超时时间
+		ctx, cancel = context.WithCancel(context.Background())
+	}
 	defer cancel()
 
 	// 执行查询
@@ -100,8 +117,18 @@ func ExecuteQuery(config *pkg.Config, logWriter io.Writer, cmdLogger *logger.Log
 			Status: "error",
 			Error:  err.Error(),
 		}
+
+		// 设置超时信息
+		var timeoutSetting string
+		if config.Timeout > 0 {
+			timeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+		} else {
+			timeoutSetting = "无限制"
+		}
+		result.TimeoutSetting = timeoutSetting
+
 		cmdLogger.LogSQL(result)
-		output.OutputSQLResult(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), config.JSONOutput, logWriter)
+		output.OutputSQLResultWithTimeout(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), timeoutSetting, config.JSONOutput, logWriter)
 		return
 	}
 	defer rows.Close()
@@ -116,8 +143,18 @@ func ExecuteQuery(config *pkg.Config, logWriter io.Writer, cmdLogger *logger.Log
 			Status: "error",
 			Error:  err.Error(),
 		}
+
+		// 设置超时信息
+		var timeoutSetting string
+		if config.Timeout > 0 {
+			timeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+		} else {
+			timeoutSetting = "无限制"
+		}
+		result.TimeoutSetting = timeoutSetting
+
 		cmdLogger.LogSQL(result)
-		output.OutputSQLResult(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), config.JSONOutput, logWriter)
+		output.OutputSQLResultWithTimeout(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), timeoutSetting, config.JSONOutput, logWriter)
 		return
 	}
 
@@ -144,8 +181,18 @@ func ExecuteQuery(config *pkg.Config, logWriter io.Writer, cmdLogger *logger.Log
 				Status: "error",
 				Error:  err.Error(),
 			}
+
+			// 设置超时信息
+			var timeoutSetting string
+			if config.Timeout > 0 {
+				timeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+			} else {
+				timeoutSetting = "无限制"
+			}
+			result.TimeoutSetting = timeoutSetting
+
 			cmdLogger.LogSQL(result)
-			output.OutputSQLResult(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), config.JSONOutput, logWriter)
+			output.OutputSQLResultWithTimeout(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), timeoutSetting, config.JSONOutput, logWriter)
 			return
 		}
 
@@ -178,8 +225,18 @@ func ExecuteQuery(config *pkg.Config, logWriter io.Writer, cmdLogger *logger.Log
 			Status: "error",
 			Error:  err.Error(),
 		}
+
+		// 设置超时信息
+		var timeoutSetting string
+		if config.Timeout > 0 {
+			timeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+		} else {
+			timeoutSetting = "无限制"
+		}
+		result.TimeoutSetting = timeoutSetting
+
 		cmdLogger.LogSQL(result)
-		output.OutputSQLResult(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), config.JSONOutput, logWriter)
+		output.OutputSQLResultWithTimeout(config.DBHost, "error", config.DBType, nil, "0s", err.Error(), timeoutSetting, config.JSONOutput, logWriter)
 		return
 	}
 
@@ -194,7 +251,18 @@ func ExecuteQuery(config *pkg.Config, logWriter io.Writer, cmdLogger *logger.Log
 		Rows:     results,
 		Duration: duration,
 	}
+
+	// 添加超时设置信息到日志
+	var timeoutSetting string
+	if config.Timeout > 0 {
+		timeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+		result.TimeoutSetting = timeoutSetting
+	} else {
+		timeoutSetting = "无限制"
+		result.TimeoutSetting = timeoutSetting
+	}
+
 	cmdLogger.LogSQL(result)
 
-	output.OutputSQLResult(config.DBHost, "success", config.DBType, results, duration, "", config.JSONOutput, logWriter)
+	output.OutputSQLResultWithTimeout(config.DBHost, "success", config.DBType, results, duration, "", timeoutSetting, config.JSONOutput, logWriter)
 }
