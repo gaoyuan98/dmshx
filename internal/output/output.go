@@ -28,17 +28,23 @@ func OutputCmdResultWithUsers(host, status, stdout, stderr, cmdType, duration, e
 
 // OutputCmdResultFull 输出完整的命令执行结果，包括实际执行的命令
 func OutputCmdResultFull(host, status, stdout, stderr, cmdType, duration, errMsg, sshUser, execUser, actualCmd string, jsonOutput bool, writer io.Writer) {
+	OutputCmdResultComplete(host, status, stdout, stderr, cmdType, duration, errMsg, sshUser, execUser, actualCmd, "", jsonOutput, writer)
+}
+
+// OutputCmdResultComplete 输出完整的命令执行结果，包括实际执行的命令和超时设置
+func OutputCmdResultComplete(host, status, stdout, stderr, cmdType, duration, errMsg, sshUser, execUser, actualCmd, timeoutSetting string, jsonOutput bool, writer io.Writer) {
 	result := pkg.CmdResult{
-		Host:      host,
-		Type:      cmdType,
-		Status:    status,
-		Stdout:    stdout,
-		Stderr:    stderr,
-		Duration:  duration,
-		Timestamp: time.Now().Format("2006-01-02 15:04:05"),
-		SSHUser:   sshUser,
-		ExecUser:  execUser,
-		ActualCmd: actualCmd,
+		Host:           host,
+		Type:           cmdType,
+		Status:         status,
+		Stdout:         stdout,
+		Stderr:         stderr,
+		Duration:       duration,
+		Timestamp:      time.Now().Format("2006-01-02 15:04:05"),
+		SSHUser:        sshUser,
+		ExecUser:       execUser,
+		ActualCmd:      actualCmd,
+		TimeoutSetting: timeoutSetting,
 	}
 
 	if errMsg != "" {
@@ -66,6 +72,10 @@ func OutputCmdResultFull(host, status, stdout, stderr, cmdType, duration, errMsg
 
 		if result.ActualCmd != "" {
 			fmt.Fprintf(writer, "实际命令: %s\n", result.ActualCmd)
+		}
+
+		if result.TimeoutSetting != "" {
+			fmt.Fprintf(writer, "超时设置: %s\n", result.TimeoutSetting)
 		}
 
 		fmt.Fprintf(writer, "Stdout: %s\nStderr: %s\nDuration: %s\n",

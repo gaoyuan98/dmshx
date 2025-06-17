@@ -142,6 +142,7 @@ dmshx -version
 | -json-output | bool | true | 是否以JSON格式输出结果，便于程序解析，默认开启 |
 | -log-file | string | "" | 执行结果输出日志文件路径，若指定则同时输出到屏幕和文件 |
 | -version, -v | bool | false | 显示程序版本号、构建时间、作者和构建日期信息 |
+| -real-time | bool | false | 启用命令执行实时输出功能，只在非JSON输出模式下有效（-json-output=false） |
 | -enable-command-log | bool | true | 是否启用命令执行日志记录功能，默认开启 |
 | -command-log-path | string | "./logs" | 命令执行日志存储目录 |
 | -log-retention | int | 7 | 日志文件保留天数，超过此天数的日志将被自动清理 |
@@ -167,7 +168,8 @@ dmshx支持两种输出格式：JSON格式（默认）和文本格式。所有�
   "error": "",
   "ssh_user": "root",
   "exec_user": "dmdba",
-  "actual_cmd": "su - dmdba -c 'ls -la'"
+  "actual_cmd": "su - dmdba -c 'ls -la'",
+  "timeout_setting": "30秒"
 }
 ```
 
@@ -330,6 +332,7 @@ Error: table or view does not exist: NONEXISTENT_TABLE
 | `ssh_user` | string | SSH连接使用的用户名 |
 | `exec_user` | string | 实际执行命令的用户名，当使用-exec-user参数时会与ssh_user不同 |
 | `actual_cmd` | string | 实际执行的命令字符串，当使用-exec-user参数时会与原始命令不同 |
+| `timeout_setting` | string | 执行命令的超时设置，如"30秒"或"无限制" |
 
 #### SSH命令执行特有字段
 
@@ -405,6 +408,7 @@ SSH用户: root
 执行用户: dmdba  (仅当与SSH用户不同时显示)
 原始命令: ls -la
 实际命令: su - dmdba -c 'ls -la'  (仅当与原始命令不同时显示)
+超时设置: 30秒
 执行状态: 成功/失败
 执行耗时: 2.45s
 执行结果: ...
@@ -437,6 +441,9 @@ dmshx -host-file "production_servers.txt" -user "ops" -password "secure_pass" -c
 4. 以root用户连接但以dmdba用户执行命令：
 ```bash
 dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ps -ef | grep dms" -exec-user "dmdba"
+
+dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -exec-user "dmdba"
+ 
 ```
 
 这种方式实际执行的命令是：`su - dmdba -c 'ps -ef | grep dms'`，适用于需要以特定用户身份执行命令的场景，例如操作达梦数据库时需要使用dmdba用户权限。
@@ -447,3 +454,32 @@ dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "tar -c
 ```
 
 这种设置适用于执行时间不可预测的长时间运行命令，如备份、大文件传输等。
+
+# 输出到日志文件
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -log-file "output.log"
+
+# 以文本模式实时显示命令执行过程
+dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -json-output=false -real-time
+
+# 启用命令执行日志记录并设置保留天数
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -enable-command-log -log-retention 30
+```
+
+### 实时输出模式
+
+dmshx支持实时输出模式，可在执行耗时较长的命令时提供更好的用户体验：
+
+```bash
+# 启用实时输出模式（需要设置json-output=false）
+dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -json-output=false -real-time
+```
+
+在实时输出模式下：
+1. 命令开始执行时显示提示信息
+2. 命令执行过程中的输出会实时显示在终端
+3. 命令完成后显示执行结果摘要
+4. 最终以文本格式输出完整结果
+
+此模式特别适合执行耗时较长的操作（如数据库启停、备份还原等），使用户可以实时查看执行进度。
+
+**注意**: 实时输出模式只在`-json-output=false`时有效，因为JSON格式必须作为完整结构输出。

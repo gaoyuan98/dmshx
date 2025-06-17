@@ -90,6 +90,11 @@ func (l *Logger) LogCommand(result *pkg.CmdResult) {
 		fmt.Fprintf(logFile, "实际命令: %s\n", result.ActualCmd)
 	}
 
+	// 添加超时设置信息
+	if result.TimeoutSetting != "" {
+		fmt.Fprintf(logFile, "超时设置: %s\n", result.TimeoutSetting)
+	}
+
 	fmt.Fprintf(logFile, "执行状态: %s\n", result.Status)
 	fmt.Fprintf(logFile, "执行耗时: %s\n", result.Duration)
 	fmt.Fprintf(logFile, "标准输出:\n%s\n", result.Stdout)

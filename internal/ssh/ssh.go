@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -99,14 +100,25 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 			startTime := time.Now()
 			client, err := ssh.Dial("tcp", addr, clientConfig)
 			if err != nil {
+				// 设置超时信息
+				var timeoutSetting string
+				if config.Timeout > 0 {
+					timeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+				} else {
+					timeoutSetting = "无限制"
+				}
+
 				result := &pkg.CmdResult{
-					Host:   host,
-					Type:   "cmd",
-					Status: "error",
-					Error:  err.Error(),
+					Host:           host,
+					Type:           "cmd",
+					Status:         "error",
+					Error:          err.Error(),
+					SSHUser:        config.User,
+					ExecUser:       config.User,
+					TimeoutSetting: timeoutSetting,
 				}
 				cmdLogger.LogCommand(result)
-				output.OutputCmdResult(host, "error", "", "", "cmd", "0s", err.Error(), config.JSONOutput, logWriter)
+				output.OutputCmdResultComplete(host, "error", "", "", "cmd", "0s", err.Error(), config.User, config.User, "", timeoutSetting, config.JSONOutput, logWriter)
 				return
 			}
 			defer client.Close()
@@ -114,16 +126,25 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 			// 创建会话
 			session, err := client.NewSession()
 			if err != nil {
+				// 设置超时信息
+				var timeoutSetting string
+				if config.Timeout > 0 {
+					timeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+				} else {
+					timeoutSetting = "无限制"
+				}
+
 				result := &pkg.CmdResult{
-					Host:     host,
-					Type:     "cmd",
-					Status:   "error",
-					Error:    err.Error(),
-					SSHUser:  config.User,
-					ExecUser: config.User,
+					Host:           host,
+					Type:           "cmd",
+					Status:         "error",
+					Error:          err.Error(),
+					SSHUser:        config.User,
+					ExecUser:       config.User,
+					TimeoutSetting: timeoutSetting,
 				}
 				cmdLogger.LogCommand(result)
-				output.OutputCmdResultFull(host, "error", "", "", "cmd", "0s", err.Error(), config.User, config.User, "", config.JSONOutput, logWriter)
+				output.OutputCmdResultComplete(host, "error", "", "", "cmd", "0s", err.Error(), config.User, config.User, "", timeoutSetting, config.JSONOutput, logWriter)
 				return
 			}
 			defer session.Close()
@@ -143,20 +164,37 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 				execUser = config.ExecUser // 更新实际执行用户
 			}
 
+			// 设置超时信息
+			var timeoutSetting string
+			if config.Timeout > 0 {
+				timeoutSetting = fmt.Sprintf("%d秒", config.Timeout)
+			} else {
+				timeoutSetting = "无限制"
+			}
+
+			// 创建多写入器，同时写入到strings.Builder和标准输出
+			if !config.JSONOutput && config.RealTimeOutput {
+				// 实时输出模式：同时写入到变量和屏幕
+				fmt.Printf("正在执行命令 [%s]: %s\n", host, cmdToExecute)
+				session.Stdout = io.MultiWriter(&stdout, os.Stdout)
+				session.Stderr = io.MultiWriter(&stderr, os.Stderr)
+			}
+
 			// 执行命令
 			err = session.Start(cmdToExecute)
 			if err != nil {
 				result := &pkg.CmdResult{
-					Host:      host,
-					Type:      "cmd",
-					Status:    "error",
-					Error:     err.Error(),
-					SSHUser:   config.User,
-					ExecUser:  execUser,
-					ActualCmd: cmdToExecute,
+					Host:           host,
+					Type:           "cmd",
+					Status:         "error",
+					Error:          err.Error(),
+					SSHUser:        config.User,
+					ExecUser:       execUser,
+					ActualCmd:      cmdToExecute,
+					TimeoutSetting: timeoutSetting,
 				}
 				cmdLogger.LogCommand(result)
-				output.OutputCmdResultFull(host, "error", "", "", "cmd", "0s", err.Error(), config.User, execUser, cmdToExecute, config.JSONOutput, logWriter)
+				output.OutputCmdResultComplete(host, "error", "", "", "cmd", "0s", err.Error(), config.User, execUser, cmdToExecute, timeoutSetting, config.JSONOutput, logWriter)
 				return
 			}
 
@@ -192,22 +230,29 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 
 			// 创建命令执行结果
 			result := &pkg.CmdResult{
-				Host:      host,
-				Type:      "cmd",
-				Status:    status,
-				Stdout:    stdout.String(),
-				Stderr:    stderr.String(),
-				Duration:  duration,
-				Error:     errMsg,
-				SSHUser:   config.User,
-				ExecUser:  execUser,
-				ActualCmd: cmdToExecute,
+				Host:           host,
+				Type:           "cmd",
+				Status:         status,
+				Stdout:         stdout.String(),
+				Stderr:         stderr.String(),
+				Duration:       duration,
+				Error:          errMsg,
+				SSHUser:        config.User,
+				ExecUser:       execUser,
+				ActualCmd:      cmdToExecute,
+				TimeoutSetting: timeoutSetting,
 			}
 
 			// 记录命令执行日志
 			cmdLogger.LogCommand(result)
 
-			output.OutputCmdResultFull(host, status, stdout.String(), stderr.String(), "cmd", duration, errMsg, config.User, execUser, cmdToExecute, config.JSONOutput, logWriter)
+			// 如果是实时输出模式，在结束时显示完成信息
+			if !config.JSONOutput && config.RealTimeOutput {
+				fmt.Printf("命令执行完成 [%s]: %s (耗时: %s)\n", host, cmdToExecute, duration)
+				fmt.Println("----------------------------------------")
+			}
+
+			output.OutputCmdResultComplete(host, status, stdout.String(), stderr.String(), "cmd", duration, errMsg, config.User, execUser, cmdToExecute, timeoutSetting, config.JSONOutput, logWriter)
 		}(host)
 	}
 

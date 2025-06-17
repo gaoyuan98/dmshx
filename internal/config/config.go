@@ -46,6 +46,7 @@ func Parse() *pkg.Config {
 	flag.StringVar(&config.LogFile, "log-file", "", "Path to log file")
 	flag.BoolVar(&config.Version, "version", false, "Show version and build time")
 	flag.BoolVar(&config.Version, "v", false, "Show version and build time (alias for -version)")
+	flag.BoolVar(&config.RealTimeOutput, "real-time", false, "Enable real-time output for command execution, only works when -json-output=false")
 
 	// 命令执行日志参数
 	flag.BoolVar(&config.EnableCommandLog, "enable-command-log", true, "Enable command execution logging")

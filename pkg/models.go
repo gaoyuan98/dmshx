@@ -39,9 +39,10 @@ type Config struct {
 	SQL    string
 
 	// 输出相关参数
-	JSONOutput bool
-	LogFile    string
-	Version    bool
+	JSONOutput     bool
+	LogFile        string
+	Version        bool
+	RealTimeOutput bool // 是否启用实时输出，在非JSON模式下有效
 
 	// 命令执行日志参数
 	EnableCommandLog bool
@@ -51,17 +52,18 @@ type Config struct {
 
 // CmdResult 命令执行结果
 type CmdResult struct {
-	Host      string `json:"host"`
-	Type      string `json:"type"`
-	Status    string `json:"status"`
-	Stdout    string `json:"stdout"`
-	Stderr    string `json:"stderr"`
-	Duration  string `json:"duration"`
-	Error     string `json:"error,omitempty"`
-	Timestamp string `json:"timestamp"`
-	SSHUser   string `json:"ssh_user,omitempty"`   // SSH连接使用的用户
-	ExecUser  string `json:"exec_user,omitempty"`  // 实际执行命令的用户
-	ActualCmd string `json:"actual_cmd,omitempty"` // 实际执行的命令（可能是经过转换的）
+	Host           string `json:"host"`
+	Type           string `json:"type"`
+	Status         string `json:"status"`
+	Stdout         string `json:"stdout"`
+	Stderr         string `json:"stderr"`
+	Duration       string `json:"duration"`
+	Error          string `json:"error,omitempty"`
+	Timestamp      string `json:"timestamp"`
+	SSHUser        string `json:"ssh_user,omitempty"`        // SSH连接使用的用户
+	ExecUser       string `json:"exec_user,omitempty"`       // 实际执行命令的用户
+	ActualCmd      string `json:"actual_cmd,omitempty"`      // 实际执行的命令（可能是经过转换的）
+	TimeoutSetting string `json:"timeout_setting,omitempty"` // 超时设置信息
 }
 
 // SQLResult SQL执行结果
