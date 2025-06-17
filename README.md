@@ -128,27 +128,64 @@ dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -ena
 | -sql | string | "" | 要执行的SQL查询语句，例如 "SELECT * FROM V$INSTANCE" |
 | -json-output | bool | true | 是否以JSON格式输出结果，便于程序解析，默认开启 |
 | -log-file | string | "" | 执行结果输出日志文件路径，若指定则同时输出到屏幕和文件 |
-| -version | bool | false | 显示程序版本号和构建时间信息 |
+| -version | bool | false | 显示程序版本号、构建时间、作者和构建日期信息 |
 | -enable-command-log | bool | true | 是否启用命令执行日志记录功能，默认开启 |
 | -command-log-path | string | "./logs" | 命令执行日志存储目录 |
 | -log-retention | int | 7 | 日志文件保留天数，超过此天数的日志将被自动清理 |
 
-## 输出格式（JSON）
+## 输出格式详解
 
-### 执行命令返回
+dmshx支持两种输出格式：JSON格式（默认）和文本格式。所有输出都包含统一的字段结构，便于程序解析和日志归档。
+
+### JSON格式输出（默认）
+
+#### SSH命令执行结果
+
+**成功执行示例：**
 ```json
 {
   "host": "192.168.112.168",
   "type": "cmd",
   "status": "success",
-  "stdout": "...",
+  "stdout": "total 8\ndrwxr-xr-x 2 root root 4096 Jun 17 08:45 .\ndrwxr-xr-x 3 root root 4096 Jun 17 08:44 ..\n-rw-r--r-- 1 root root  123 Jun 17 08:45 test.txt",
   "stderr": "",
   "duration": "2.45s",
-  "timestamp": "2023-06-17 08:45:12"
+  "timestamp": "2025-06-17 08:45:12",
+  "error": ""
 }
 ```
 
-### SQL查询返回
+**执行失败示例：**
+```json
+{
+  "host": "192.168.112.168",
+  "type": "cmd",
+  "status": "error",
+  "stdout": "",
+  "stderr": "ls: cannot access '/nonexistent': No such file or directory",
+  "duration": "0.12s",
+  "timestamp": "2025-06-17 08:45:12",
+  "error": "exit status 2"
+}
+```
+
+**连接失败示例：**
+```json
+{
+  "host": "192.168.112.168",
+  "type": "cmd",
+  "status": "error",
+  "stdout": "",
+  "stderr": "",
+  "duration": "0s",
+  "timestamp": "2025-06-17 08:45:12",
+  "error": "dial tcp 192.168.112.168:22: connect: connection refused"
+}
+```
+
+#### SQL查询执行结果
+
+**成功查询示例：**
 ```json
 {
   "host": "192.168.112.168",
@@ -156,12 +193,181 @@ dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -ena
   "db": "dm",
   "status": "success",
   "rows": [
-    {"INSTANCE_NAME": "DAMENG", "VERSION": "8.0.0.128", "STATUS": "ACTIVE"}
+    {
+      "INSTANCE_NAME": "DAMENG",
+      "VERSION": "8.0.0.128",
+      "STATUS": "ACTIVE",
+      "STARTUP_TIME": "2025-06-17 08:00:00"
+    },
+    {
+      "INSTANCE_NAME": "DAMENG2",
+      "VERSION": "8.0.0.128",
+      "STATUS": "ACTIVE",
+      "STARTUP_TIME": "2025-06-17 08:30:00"
+    }
   ],
   "duration": "0.91s",
-  "timestamp": "2023-06-17 08:45:12"
+  "timestamp": "2025-06-17 08:45:12",
+  "error": ""
 }
 ```
+
+**查询失败示例：**
+```json
+{
+  "host": "192.168.112.168",
+  "type": "sql",
+  "db": "dm",
+  "status": "error",
+  "rows": [],
+  "duration": "0.05s",
+  "timestamp": "2025-06-17 08:45:12",
+  "error": "table or view does not exist: NONEXISTENT_TABLE"
+}
+```
+
+**连接失败示例：**
+```json
+{
+  "host": "192.168.112.168",
+  "type": "sql",
+  "db": "dm",
+  "status": "error",
+  "rows": [],
+  "duration": "0s",
+  "timestamp": "2025-06-17 08:45:12",
+  "error": "dial tcp 192.168.112.168:5236: connect: connection refused"
+}
+```
+
+### 文本格式输出
+
+当设置 `-json-output=false` 时，输出为易读的文本格式：
+
+#### SSH命令执行结果（文本格式）
+
+**成功执行：**
+```
+Host: 192.168.112.168
+Type: cmd
+Status: success
+Timestamp: 2025-06-17 08:45:12
+Stdout: total 8
+drwxr-xr-x 2 root root 4096 Jun 17 08:45 .
+drwxr-xr-x 3 root root 4096 Jun 17 08:44 ..
+-rw-r--r-- 1 root root  123 Jun 17 08:45 test.txt
+Stderr: 
+Duration: 2.45s
+```
+
+**执行失败：**
+```
+Host: 192.168.112.168
+Type: cmd
+Status: error
+Timestamp: 2025-06-17 08:45:12
+Stdout: 
+Stderr: ls: cannot access '/nonexistent': No such file or directory
+Duration: 0.12s
+Error: exit status 2
+```
+
+#### SQL查询结果（文本格式）
+
+**成功查询：**
+```
+Host: 192.168.112.168
+Type: sql
+DB: dm
+Status: success
+Timestamp: 2025-06-17 08:45:12
+Duration: 0.91s
+Rows: 2
+  Row 1: map[INSTANCE_NAME:DAMENG VERSION:8.0.0.128 STATUS:ACTIVE]
+  Row 2: map[INSTANCE_NAME:DAMENG2 VERSION:8.0.0.128 STATUS:ACTIVE]
+```
+
+**查询失败：**
+```
+Host: 192.168.112.168
+Type: sql
+DB: dm
+Status: error
+Timestamp: 2025-06-17 08:45:12
+Duration: 0.05s
+Rows: 0
+Error: table or view does not exist: NONEXISTENT_TABLE
+```
+
+### 输出字段说明
+
+#### 通用字段
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| `host` | string | 目标主机IP地址或主机名 |
+| `type` | string | 执行类型，SSH命令为"cmd"，SQL查询为"sql" |
+| `status` | string | 执行状态，"success"表示成功，"error"表示失败 |
+| `duration` | string | 执行耗时，格式为"Xs"（如"2.45s"） |
+| `timestamp` | string | 执行完成时间戳，格式为"YYYY-MM-DD HH:MM:SS" |
+
+#### SSH命令执行特有字段
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| `stdout` | string | 命令的标准输出内容 |
+| `stderr` | string | 命令的标准错误输出内容 |
+| `error` | string | 执行过程中的错误信息（仅在失败时存在） |
+
+#### SQL查询特有字段
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| `db` | string | 数据库类型，如"dm"、"oracle" |
+| `rows` | array | 查询结果行数组，每行为一个对象，键为列名，值为列值 |
+| `error` | string | 查询过程中的错误信息（仅在失败时存在） |
+
+### 多主机并发执行
+
+当指定多个主机时，每个主机的执行结果会分别输出：
+
+```bash
+# 执行命令
+dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -password "password" -cmd "uptime"
+```
+
+**输出示例：**
+```json
+{
+  "host": "192.168.1.10",
+  "type": "cmd",
+  "status": "success",
+  "stdout": " 08:45:12 up 5 days, 12:30,  1 user,  load average: 0.52, 0.48, 0.45",
+  "stderr": "",
+  "duration": "1.23s",
+  "timestamp": "2025-06-17 08:45:12"
+}
+{
+  "host": "192.168.1.11",
+  "type": "cmd",
+  "status": "success",
+  "stdout": " 08:45:13 up 3 days, 8:15,  2 users,  load average: 0.78, 0.65, 0.52",
+  "stderr": "",
+  "duration": "1.45s",
+  "timestamp": "2025-06-17 08:45:13"
+}
+```
+
+### 错误处理
+
+dmshx对不同类型的错误提供详细的错误信息：
+
+1. **连接错误**：网络连接失败、认证失败等
+2. **执行错误**：命令执行失败、SQL语法错误等
+3. **超时错误**：执行时间超过设定的超时时间
+4. **权限错误**：SSH认证失败、数据库权限不足等
+
+所有错误都会在`error`字段中提供具体的错误描述，便于问题诊断和调试。
 
 ## 日志记录
 
