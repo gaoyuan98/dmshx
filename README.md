@@ -46,7 +46,7 @@ DMSHX (D(M) + (S)SH + (H)ost e(X)ecutor) 是一个跨平台、零依赖的命令
 需要Go 1.19或更高版本。
 
 ```bash
-git clone https://github.com/yourusername/dmshx.git
+git clone https://github.com/gaoyuan98/dmshx/dmshx.git
 cd dmshx
 go build -o dmshx ./cmd/dmshx
 ```
@@ -536,11 +536,6 @@ dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/d
 
 ```bash
 
--host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ls -la"
-
--host "192.168.112.168" -user "root" -password "gaoyuan123#" -upload-file "E:\go_code\dmshx\build_dmshx.bat" -upload-dir "/opt/"
-
-
 # 上传单个文件到远程主机
 dmshx -hosts "192.168.1.10" -user "root" -password "password" -upload-file "/path/to/localfile.txt" -upload-dir "/opt/destination/"
 
@@ -552,4 +547,20 @@ dmshx -hosts "192.168.1.10" -user "root" -password "password" -upload-file "/pat
 
 # 从文件读取主机列表上传文件
 dmshx -host-file "hosts.txt" -user "root" -password "password" -upload-file "/path/to/config.conf" -upload-dir "/etc/app/"
+```
+
+
+# 自己测试用
+```
+
+-host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ls -la"
+
+-host "192.168.112.168" -user "root" -password "gaoyuan123#" -upload-file "E:\go_code\dmshx\build_dmshx.bat" -upload-dir "/opt/"
+
+-host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -exec-user "dmdba"  -json-output=false -real-time
+
+
+-db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM V$INSTANCE" -timeout 60
+
+
 ```

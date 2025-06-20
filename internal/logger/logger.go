@@ -97,9 +97,9 @@ func (l *Logger) LogCommand(result *pkg.CmdResult) {
 
 	fmt.Fprintf(logFile, "执行状态: %s\n", result.Status)
 	fmt.Fprintf(logFile, "执行耗时: %s\n", result.Duration)
-	fmt.Fprintf(logFile, "标准输出:\n%s\n", result.Stdout)
+	fmt.Fprintf(logFile, "标准输出:\n%s\n", pkg.CleanAnsiSequences(result.Stdout))
 	if result.Stderr != "" {
-		fmt.Fprintf(logFile, "标准错误:\n%s\n", result.Stderr)
+		fmt.Fprintf(logFile, "标准错误:\n%s\n", pkg.CleanAnsiSequences(result.Stderr))
 	}
 	if result.Error != "" {
 		fmt.Fprintf(logFile, "错误信息: %s\n", result.Error)

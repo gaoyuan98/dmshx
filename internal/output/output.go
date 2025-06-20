@@ -79,7 +79,7 @@ func OutputCmdResultComplete(host, status, stdout, stderr, cmdType, duration, er
 		}
 
 		fmt.Fprintf(writer, "Stdout: %s\nStderr: %s\nDuration: %s\n",
-			result.Stdout, result.Stderr, result.Duration)
+			pkg.CleanAnsiSequences(result.Stdout), pkg.CleanAnsiSequences(result.Stderr), result.Duration)
 
 		if errMsg != "" {
 			fmt.Fprintf(writer, "Error: %s\n", errMsg)
