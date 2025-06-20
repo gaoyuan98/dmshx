@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"runtime"
 
 	"dmshx/internal/config"
 	"dmshx/internal/logger"
@@ -21,6 +23,14 @@ import (
 func main() {
 	// 解析命令行参数
 	cfg := config.Parse()
+
+	// 设置控制台输出编码为UTF-8
+	if runtime.GOOS == "windows" && cfg.EnableUTF8 {
+		// 在Windows系统上，设置控制台代码页为65001(UTF-8)
+		cmd := exec.Command("chcp", "65001")
+		cmd.Stdout = nil
+		cmd.Run()
+	}
 
 	// 显示版本信息
 	if cfg.Version {
@@ -47,8 +57,16 @@ func main() {
 	// 获取主机列表
 	hosts := config.GetHosts(cfg)
 
-	// 执行命令或SQL
-	if cfg.Cmd != "" {
+	// 执行命令、上传文件或SQL
+	if cfg.UploadFile != "" && cfg.UploadDir != "" {
+		// 上传文件需要主机列表
+		if len(hosts) == 0 {
+			fmt.Fprintf(os.Stderr, "No hosts specified for file upload. Use -hosts or -host-file\n")
+			os.Exit(1)
+		}
+		// 上传文件
+		ssh.UploadFiles(hosts, cfg, logWriter, cmdLogger)
+	} else if cfg.Cmd != "" {
 		// 执行SSH命令需要主机列表
 		if len(hosts) == 0 {
 			fmt.Fprintf(os.Stderr, "No hosts specified for SSH command. Use -hosts or -host-file\n")
@@ -60,7 +78,7 @@ func main() {
 		// 执行SQL查询
 		sql.ExecuteQuery(cfg, logWriter, cmdLogger)
 	} else {
-		fmt.Fprintf(os.Stderr, "No command or SQL query specified. Use -cmd or -sql\n")
+		fmt.Fprintf(os.Stderr, "No command, upload file or SQL query specified. Use -cmd, -upload-file and -upload-dir, or -sql\n")
 		os.Exit(1)
 	}
 }

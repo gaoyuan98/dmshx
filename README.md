@@ -10,6 +10,13 @@ DMSHX (D(M) + (S)SH + (H)ost e(X)ecutor) 是一个跨平台、零依赖的命令
 - 支持传参方式执行任意shell命令（如cat, sed, echo）
 - 支持命令超时控制（单位秒）
 
+### 文件上传功能
+- 支持SFTP文件上传到远程主机
+- 支持自动创建远程目录结构
+- 支持设置上传文件的权限
+- 支持上传超时控制
+- 支持多主机并行上传
+
 ### SQL查询功能
 - 支持数据库类型：
   - 达梦数据库（DM）
@@ -108,6 +115,9 @@ dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -jso
 # 输出到日志文件
 dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -log-file "output.log"
 
+# 关闭UTF-8编码（适用于特殊终端环境）
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -enable-utf8=false
+
 # 启用命令执行日志记录并设置保留天数
 dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -enable-command-log -log-retention 30
 
@@ -132,6 +142,9 @@ dmshx -version
 | -cmd | string | "" | 在远程主机执行的Shell命令，例如 "ls -la /opt" 或 "cat /etc/hosts" |
 | -timeout | int | 30 | 命令或SQL执行超时时间，单位为秒，超时后会终止执行 |
 | -exec-user | string | "" | 执行命令的用户，如果设置且与SSH登录用户不同，将使用su切换到该用户执行命令 |
+| -upload-file | string | "" | 要上传到远程主机的本地文件路径 |
+| -upload-dir | string | "" | 远程主机上的目标目录，文件将上传到此目录下 |
+| -upload-perm | int | 0644 | 上传文件的权限设置（八进制），默认为0644 |
 | -db-type | string | "" | 数据库类型，当前支持 "dm"（达梦数据库），未来计划支持 "oracle" |
 | -db-host | string | "" | 数据库服务器主机名或IP地址 |
 | -db-port | int | 0 | 数据库服务端口，达梦数据库默认为5236 |
@@ -143,9 +156,10 @@ dmshx -version
 | -log-file | string | "" | 执行结果输出日志文件路径，若指定则同时输出到屏幕和文件 |
 | -version, -v | bool | false | 显示程序版本号、构建时间、作者和构建日期信息 |
 | -real-time | bool | false | 启用命令执行实时输出功能，只在非JSON输出模式下有效（-json-output=false） |
+| -enable-utf8 | bool | true | 启用UTF-8编码输出，在Windows环境下自动设置控制台代码页为65001(UTF-8)，确保中文正确显示 |
 | -enable-command-log | bool | true | 是否启用命令执行日志记录功能，默认开启 |
 | -command-log-path | string | "./logs" | 命令执行日志存储目录 |
-| -log-retention | int | 7 | 日志文件保留天数，超过此天数的日志将被自动清理 |
+| -log-retention | int | 7 | 日志文件保留天数，同时也是清理检查的间隔天数 |
 
 ## 输出格式详解
 
@@ -256,6 +270,40 @@ dmshx支持两种输出格式：JSON格式（默认）和文本格式。所有�
   "duration": "0s",
   "timestamp": "2025-06-17 08:45:12",
   "error": "dial tcp 192.168.112.168:5236: connect: connection refused"
+}
+```
+
+#### 文件上传结果
+
+**上传成功示例：**
+```json
+{
+  "host": "192.168.1.10",
+  "type": "upload",
+  "status": "success",
+  "local_file": "/path/to/localfile.txt",
+  "remote_file": "/opt/destination/localfile.txt",
+  "size": 12345,
+  "duration": "1.23s",
+  "timestamp": "2025-06-17 08:45:12",
+  "ssh_user": "root",
+  "timeout_setting": "30秒"
+}
+```
+
+**上传失败示例：**
+```json
+{
+  "host": "192.168.1.10",
+  "type": "upload",
+  "status": "error",
+  "local_file": "/path/to/localfile.txt",
+  "remote_file": "/opt/destination/localfile.txt",
+  "size": 0,
+  "duration": "0.05s",
+  "timestamp": "2025-06-17 08:45:12",
+  "ssh_user": "root",
+  "error": "创建远程目录失败: permission denied"
 }
 ```
 
@@ -440,9 +488,9 @@ dmshx -host-file "production_servers.txt" -user "ops" -password "secure_pass" -c
 
 4. 以root用户连接但以dmdba用户执行命令：
 ```bash
-dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ps -ef | grep dms" -exec-user "dmdba"
+dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -password "rootpassword" -cmd "cat /opt/dmdata/5236/DMDB/dm.ini" -exec-user "dmdba"
 
-dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -exec-user "dmdba"
+dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -password "rootpassword" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -exec-user "dmdba"
  
 ```
 
@@ -483,3 +531,25 @@ dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/d
 此模式特别适合执行耗时较长的操作（如数据库启停、备份还原等），使用户可以实时查看执行进度。
 
 **注意**: 实时输出模式只在`-json-output=false`时有效，因为JSON格式必须作为完整结构输出。
+
+### 文件上传
+
+```bash
+
+-host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ls -la"
+
+-host "192.168.112.168" -user "root" -password "gaoyuan123#" -upload-file "E:\go_code\dmshx\build_dmshx.bat" -upload-dir "/opt/"
+
+
+# 上传单个文件到远程主机
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -upload-file "/path/to/localfile.txt" -upload-dir "/opt/destination/"
+
+# 使用私钥上传文件到多台主机
+dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -key "/path/to/id_rsa" -upload-file "/path/to/localfile.txt" -upload-dir "/opt/destination/" -timeout 60
+
+# 设置上传文件的权限
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -upload-file "/path/to/script.sh" -upload-dir "/opt/scripts/" -upload-perm 0755
+
+# 从文件读取主机列表上传文件
+dmshx -host-file "hosts.txt" -user "root" -password "password" -upload-file "/path/to/config.conf" -upload-dir "/etc/app/"
+```

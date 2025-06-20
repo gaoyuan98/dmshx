@@ -29,6 +29,11 @@ type Config struct {
 	Timeout  int
 	ExecUser string // 执行命令的用户，如果设置，将使用su切换到该用户执行命令
 
+	// 文件上传相关参数
+	UploadFile       string // 要上传的本地文件路径
+	UploadDir        string // 远程目标目录
+	UploadPermission int    // 上传文件的权限（默认0644）
+
 	// 数据库相关参数
 	DBType string
 	DBHost string
@@ -43,11 +48,12 @@ type Config struct {
 	LogFile        string
 	Version        bool
 	RealTimeOutput bool // 是否启用实时输出，在非JSON模式下有效
+	EnableUTF8     bool // 是否启用UTF-8编码输出
 
 	// 命令执行日志参数
 	EnableCommandLog bool
 	CommandLogPath   string
-	LogRetention     int
+	LogRetention     int // 日志保留天数，同时作为日志清理检查间隔
 }
 
 // CmdResult 命令执行结果
@@ -77,4 +83,19 @@ type SQLResult struct {
 	Error          string        `json:"error,omitempty"`
 	Timestamp      string        `json:"timestamp"`
 	TimeoutSetting string        `json:"timeout_setting,omitempty"` // 超时设置信息
+}
+
+// UploadResult 文件上传结果
+type UploadResult struct {
+	Host           string `json:"host"`
+	Type           string `json:"type"`
+	Status         string `json:"status"`
+	LocalFile      string `json:"local_file"`
+	RemoteFile     string `json:"remote_file"`
+	Size           int64  `json:"size"`
+	Duration       string `json:"duration"`
+	Error          string `json:"error,omitempty"`
+	Timestamp      string `json:"timestamp"`
+	SSHUser        string `json:"ssh_user,omitempty"`
+	TimeoutSetting string `json:"timeout_setting,omitempty"` // 超时设置信息
 }

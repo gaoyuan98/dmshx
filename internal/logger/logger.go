@@ -105,8 +105,9 @@ func (l *Logger) LogCommand(result *pkg.CmdResult) {
 		fmt.Fprintf(logFile, "错误信息: %s\n", result.Error)
 	}
 
-	// 每24小时检查一次是否需要清理日志
-	if time.Since(l.lastCleanupTime) > 24*time.Hour {
+	// 根据LogRetention设置的天数检查是否需要清理日志
+	cleanupInterval := time.Duration(l.config.LogRetention) * 24 * time.Hour
+	if time.Since(l.lastCleanupTime) > cleanupInterval {
 		l.CleanupExpiredLogs()
 		l.lastCleanupTime = time.Now()
 	}
@@ -164,8 +165,67 @@ func (l *Logger) LogSQL(result *pkg.SQLResult) {
 		fmt.Fprintf(logFile, "错误信息: %s\n", result.Error)
 	}
 
-	// 每24小时检查一次是否需要清理日志
-	if time.Since(l.lastCleanupTime) > 24*time.Hour {
+	// 根据LogRetention设置的天数检查是否需要清理日志
+	cleanupInterval := time.Duration(l.config.LogRetention) * 24 * time.Hour
+	if time.Since(l.lastCleanupTime) > cleanupInterval {
+		l.CleanupExpiredLogs()
+		l.lastCleanupTime = time.Now()
+	}
+}
+
+// LogUpload 记录文件上传结果
+func (l *Logger) LogUpload(result *pkg.UploadResult) {
+	if !l.config.EnableCommandLog {
+		return
+	}
+
+	// 设置时间戳
+	now := time.Now()
+	result.Timestamp = now.Format("2006-01-02 15:04:05")
+
+	// 创建日期目录
+	dateDir := filepath.Join(l.config.CommandLogPath, now.Format("2006-01-02"))
+	err := os.MkdirAll(dateDir, 0755)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating date directory for logs: %v\n", err)
+		return
+	}
+
+	// 创建日志文件
+	logFilePath := filepath.Join(dateDir, fmt.Sprintf("upload_%s.log", now.Format("150405.000")))
+	logFile, err := os.Create(logFilePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating log file: %v\n", err)
+		return
+	}
+	defer logFile.Close()
+
+	// 添加UTF-8 BOM，解决中文显示问题
+	logFile.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	// 写入日志内容
+	fmt.Fprintf(logFile, "执行时间: %s\n", result.Timestamp)
+	fmt.Fprintf(logFile, "命令类型: 文件上传\n")
+	fmt.Fprintf(logFile, "目标主机: %s\n", result.Host)
+	fmt.Fprintf(logFile, "SSH用户: %s\n", result.SSHUser)
+	fmt.Fprintf(logFile, "本地文件: %s\n", result.LocalFile)
+	fmt.Fprintf(logFile, "远程文件: %s\n", result.RemoteFile)
+	fmt.Fprintf(logFile, "文件大小: %d字节\n", result.Size)
+
+	if result.TimeoutSetting != "" {
+		fmt.Fprintf(logFile, "超时设置: %s\n", result.TimeoutSetting)
+	}
+
+	fmt.Fprintf(logFile, "执行状态: %s\n", result.Status)
+	fmt.Fprintf(logFile, "执行耗时: %s\n", result.Duration)
+
+	if result.Error != "" {
+		fmt.Fprintf(logFile, "错误信息: %s\n", result.Error)
+	}
+
+	// 根据LogRetention设置的天数检查是否需要清理日志
+	cleanupInterval := time.Duration(l.config.LogRetention) * 24 * time.Hour
+	if time.Since(l.lastCleanupTime) > cleanupInterval {
 		l.CleanupExpiredLogs()
 		l.lastCleanupTime = time.Now()
 	}

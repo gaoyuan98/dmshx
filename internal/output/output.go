@@ -137,3 +137,57 @@ func OutputSQLResultWithTimeout(host, status, dbType string, rows []interface{},
 		}
 	}
 }
+
+// OutputUploadResult 输出文件上传结果
+func OutputUploadResult(host, status, localFile, remoteFile string, size int64, duration, errMsg, sshUser string, jsonOutput bool, writer io.Writer) {
+	OutputUploadResultWithTimeout(host, status, localFile, remoteFile, size, duration, errMsg, sshUser, "", jsonOutput, writer)
+}
+
+// OutputUploadResultWithTimeout 输出带有超时设置信息的文件上传结果
+func OutputUploadResultWithTimeout(host, status, localFile, remoteFile string, size int64, duration, errMsg, sshUser, timeoutSetting string, jsonOutput bool, writer io.Writer) {
+	result := pkg.UploadResult{
+		Host:           host,
+		Type:           "upload",
+		Status:         status,
+		LocalFile:      localFile,
+		RemoteFile:     remoteFile,
+		Size:           size,
+		Duration:       duration,
+		Timestamp:      time.Now().Format("2006-01-02 15:04:05"),
+		SSHUser:        sshUser,
+		TimeoutSetting: timeoutSetting,
+	}
+
+	if errMsg != "" {
+		result.Error = errMsg
+	}
+
+	if jsonOutput {
+		jsonData, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error marshaling JSON: %v\n", err)
+			return
+		}
+		fmt.Fprintln(writer, string(jsonData))
+	} else {
+		fmt.Fprintf(writer, "Host: %s\nType: upload\nStatus: %s\nTimestamp: %s\n",
+			result.Host, result.Status, result.Timestamp)
+
+		if result.SSHUser != "" {
+			fmt.Fprintf(writer, "SSH用户: %s\n", result.SSHUser)
+		}
+
+		fmt.Fprintf(writer, "本地文件: %s\n远程文件: %s\n文件大小: %d字节\n",
+			result.LocalFile, result.RemoteFile, result.Size)
+
+		if result.TimeoutSetting != "" {
+			fmt.Fprintf(writer, "超时设置: %s\n", result.TimeoutSetting)
+		}
+
+		fmt.Fprintf(writer, "Duration: %s\n", result.Duration)
+
+		if errMsg != "" {
+			fmt.Fprintf(writer, "Error: %s\n", errMsg)
+		}
+	}
+}

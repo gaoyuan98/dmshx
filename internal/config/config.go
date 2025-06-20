@@ -32,6 +32,11 @@ func Parse() *pkg.Config {
 	flag.IntVar(&config.Timeout, "timeout", 30, "Command or SQL execution timeout in seconds")
 	flag.StringVar(&config.ExecUser, "exec-user", "", "User to execute the command as (if different from SSH user)")
 
+	// 文件上传相关参数
+	flag.StringVar(&config.UploadFile, "upload-file", "", "Path to local file to upload")
+	flag.StringVar(&config.UploadDir, "upload-dir", "", "Remote directory to upload file to")
+	flag.IntVar(&config.UploadPermission, "upload-perm", 0644, "Permission for uploaded file (octal, default 0644)")
+
 	// 数据库相关参数
 	flag.StringVar(&config.DBType, "db-type", "", "Database type: dm or oracle")
 	flag.StringVar(&config.DBHost, "db-host", "", "Database host")
@@ -47,11 +52,12 @@ func Parse() *pkg.Config {
 	flag.BoolVar(&config.Version, "version", false, "Show version and build time")
 	flag.BoolVar(&config.Version, "v", false, "Show version and build time (alias for -version)")
 	flag.BoolVar(&config.RealTimeOutput, "real-time", false, "Enable real-time output for command execution, only works when -json-output=false")
+	flag.BoolVar(&config.EnableUTF8, "enable-utf8", true, "Enable UTF-8 encoding for console output")
 
 	// 命令执行日志参数
 	flag.BoolVar(&config.EnableCommandLog, "enable-command-log", true, "Enable command execution logging")
 	flag.StringVar(&config.CommandLogPath, "command-log-path", "./logs", "Directory for command execution logs")
-	flag.IntVar(&config.LogRetention, "log-retention", 7, "Log retention period in days")
+	flag.IntVar(&config.LogRetention, "log-retention", 7, "Log retention period in days and interval between log cleanup checks")
 
 	// 解析命令行参数
 	flag.Parse()
