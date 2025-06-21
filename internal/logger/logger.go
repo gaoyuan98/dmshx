@@ -241,33 +241,25 @@ func (l *Logger) LogDownload(result *pkg.DownloadResult) {
 	now := time.Now()
 	result.Timestamp = now.Format("2006-01-02 15:04:05")
 
-	// 创建日志目录
-	err := os.MkdirAll(l.config.CommandLogPath, 0755)
+	// 创建日期目录
+	dateDir := filepath.Join(l.config.CommandLogPath, now.Format("2006-01-02"))
+	err := os.MkdirAll(dateDir, 0755)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating log directory: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating date directory for logs: %v\n", err)
 		return
 	}
 
-	// 构建日志文件名（按天命名）
-	fileName := fmt.Sprintf("download_%s.log", now.Format("20060102"))
-	logFilePath := filepath.Join(l.config.CommandLogPath, fileName)
-
-	// 打开日志文件（追加模式）
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	// 创建日志文件
+	logFilePath := filepath.Join(dateDir, fmt.Sprintf("download_%s.log", now.Format("150405.000")))
+	logFile, err := os.Create(logFilePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening log file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating log file: %v\n", err)
 		return
 	}
 	defer logFile.Close()
 
-	// 写入分隔符（如果文件不是空的）
-	fileInfo, err := logFile.Stat()
-	if err == nil && fileInfo.Size() > 0 {
-		fmt.Fprintf(logFile, "\n--------------------\n\n")
-	} else if err == nil && fileInfo.Size() == 0 {
-		// 新文件，添加UTF-8 BOM
-		logFile.Write([]byte{0xEF, 0xBB, 0xBF})
-	}
+	// 添加UTF-8 BOM，解决中文显示问题
+	logFile.Write([]byte{0xEF, 0xBB, 0xBF})
 
 	// 写入日志内容
 	fmt.Fprintf(logFile, "执行时间: %s\n", result.Timestamp)
