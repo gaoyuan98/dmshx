@@ -34,6 +34,12 @@ type Config struct {
 	UploadDir        string // 远程目标目录
 	UploadPermission int    // 上传文件的权限（默认0644）
 
+	// 文件下载相关参数
+	RemotePath string // 要下载的远程文件或目录路径
+	LocalPath  string // 本地保存目录
+	VerifyMD5  bool   // 是否验证MD5校验和
+	BufferSize int64  // 下载缓冲区大小(MB)
+
 	// 数据库相关参数
 	DBType string
 	DBHost string
@@ -93,6 +99,22 @@ type UploadResult struct {
 	LocalFile      string `json:"local_file"`
 	RemoteFile     string `json:"remote_file"`
 	Size           int64  `json:"size"`
+	Duration       string `json:"duration"`
+	Error          string `json:"error,omitempty"`
+	Timestamp      string `json:"timestamp"`
+	SSHUser        string `json:"ssh_user,omitempty"`
+	TimeoutSetting string `json:"timeout_setting,omitempty"` // 超时设置信息
+}
+
+// DownloadResult 文件下载结果
+type DownloadResult struct {
+	Host           string `json:"host"`
+	Type           string `json:"type"`
+	Status         string `json:"status"`
+	RemotePath     string `json:"remote_path"`
+	LocalPath      string `json:"local_path"`
+	Size           int64  `json:"size"`
+	MD5            string `json:"md5,omitempty"`
 	Duration       string `json:"duration"`
 	Error          string `json:"error,omitempty"`
 	Timestamp      string `json:"timestamp"`

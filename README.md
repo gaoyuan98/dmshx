@@ -17,6 +17,13 @@ DMSHX (D(M) + (S)SH + (H)ost e(X)ecutor) 是一个跨平台、零依赖的命令
 - 支持上传超时控制
 - 支持多主机并行上传
 
+### 文件下载功能
+- 支持从远程主机下载单个文件或整个目录
+- 支持MD5校验确保文件完整性
+- 提供实时进度显示，包括下载速度、剩余时间等
+- 支持多主机并行下载
+- 支持下载超时控制
+
 ### SQL查询功能
 - 支持数据库类型：
   - 达梦数据库（DM）
@@ -145,6 +152,10 @@ dmshx -version
 | -upload-file | string | "" | 要上传到远程主机的本地文件路径 |
 | -upload-dir | string | "" | 远程主机上的目标目录，文件将上传到此目录下 |
 | -upload-perm | int | 0644 | 上传文件的权限设置（八进制），默认为0644 |
+| -remote-path | string | "" | 要从远程主机下载的文件或目录路径 |
+| -local-path | string | "" | 下载文件保存到本地的目录路径 |
+| -verify-md5 | bool | true | 是否验证下载文件的MD5校验和，确保文件完整性 |
+| -buffer-size | int64 | 32 | 下载文件时使用的缓冲区大小，单位为MB |
 | -db-type | string | "" | 数据库类型，当前支持 "dm"（达梦数据库），未来计划支持 "oracle" |
 | -db-host | string | "" | 数据库服务器主机名或IP地址 |
 | -db-port | int | 0 | 数据库服务端口，达梦数据库默认为5236 |
@@ -304,6 +315,41 @@ dmshx支持两种输出格式：JSON格式（默认）和文本格式。所有�
   "timestamp": "2025-06-17 08:45:12",
   "ssh_user": "root",
   "error": "创建远程目录失败: permission denied"
+}
+```
+
+#### 文件下载结果
+
+**下载成功示例：**
+```json
+{
+  "host": "192.168.1.10",
+  "type": "download",
+  "status": "success",
+  "remote_path": "/opt/source/file.txt",
+  "local_path": "/downloads/file.txt",
+  "size": 12345,
+  "md5": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+  "duration": "1.23s",
+  "timestamp": "2025-06-17 08:45:12",
+  "ssh_user": "root",
+  "timeout_setting": "30秒"
+}
+```
+
+**下载失败示例：**
+```json
+{
+  "host": "192.168.1.10",
+  "type": "download",
+  "status": "error",
+  "remote_path": "/opt/source/file.txt",
+  "local_path": "/downloads/file.txt",
+  "size": 0,
+  "duration": "0.05s",
+  "timestamp": "2025-06-17 08:45:12",
+  "ssh_user": "root",
+  "error": "远程文件不存在或无法访问: no such file or directory"
 }
 ```
 
@@ -535,7 +581,6 @@ dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/d
 ### 文件上传
 
 ```bash
-
 # 上传单个文件到远程主机
 dmshx -hosts "192.168.1.10" -user "root" -password "password" -upload-file "/path/to/localfile.txt" -upload-dir "/opt/destination/"
 
@@ -549,6 +594,26 @@ dmshx -hosts "192.168.1.10" -user "root" -password "password" -upload-file "/pat
 dmshx -host-file "hosts.txt" -user "root" -password "password" -upload-file "/path/to/config.conf" -upload-dir "/etc/app/"
 ```
 
+### 文件下载
+
+```bash
+# 从远程主机下载单个文件
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -remote-path "/opt/source/file.txt" -local-path "/downloads/"
+
+# 从远程主机下载整个目录
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -remote-path "/opt/source/dir" -local-path "/downloads/"
+
+# 使用私钥从多台主机下载文件
+dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -key "/path/to/id_rsa" -remote-path "/opt/logs/app.log" -local-path "/backup/logs/" -timeout 60
+
+# 下载并验证MD5校验和
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -remote-path "/opt/important-data.zip" -local-path "/backup/" -verify-md5 true
+
+# 设置更大的缓冲区加速下载大文件
+dmshx -hosts "192.168.1.10" -user "root" -password "password" -remote-path "/opt/large-file.tar.gz" -local-path "/backup/" -buffer-size 100 -timeout 300
+
+# 从文件读取主机列表下载文件
+dmshx -host-file "hosts.txt" -user "root" -password "password" -remote-path "/var/log/syslog" -local-path "/backup/logs/"
 
 # 自己测试用
 ```
@@ -557,8 +622,15 @@ dmshx -host-file "hosts.txt" -user "root" -password "password" -upload-file "/pa
 
 -host "192.168.112.168" -user "root" -password "gaoyuan123#" -upload-file "E:\go_code\dmshx\build_dmshx.bat" -upload-dir "/opt/"
 
--host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -exec-user "dmdba"  -json-output=false -real-time
+-host "192.168.112.168" -user "root" -password "gaoyuan123#" -remote-path "/opt/build_dmshx.bat" -local-path "E:\downloads\"
 
+# 下载大文件并指定缓冲区大小
+-hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -remote-path "/opt/dm_soft/DMDB_INSTALL_SCRIPTS/dm8_20240301_x86_kylin10_64_ent_8.1.3.26_pack26.iso" -local-path "E:\go_code\dmshx" -verify-md5 true -buffer-size 100
+
+# 禁用JSON输出以显示实时进度条
+-hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -remote-path "/opt/dm_soft/DMDB_INSTALL_SCRIPTS/dm8_20240301_x86_kylin10_64_ent_8.1.3.26_pack26.iso" -local-path "E:\go_code\dmshx" -buffer-size 100 -json-output=false -verify-md5 true
+
+-host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -exec-user "dmdba" -json-output=false -real-time
 
 -db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM V$INSTANCE" -timeout 60
 

@@ -66,6 +66,14 @@ func main() {
 		}
 		// 上传文件
 		ssh.UploadFiles(hosts, cfg, logWriter, cmdLogger)
+	} else if cfg.RemotePath != "" && cfg.LocalPath != "" {
+		// 下载文件需要主机列表
+		if len(hosts) == 0 {
+			fmt.Fprintf(os.Stderr, "No hosts specified for file download. Use -hosts or -host-file\n")
+			os.Exit(1)
+		}
+		// 下载文件
+		ssh.DownloadFiles(hosts, cfg, logWriter, cmdLogger)
 	} else if cfg.Cmd != "" {
 		// 执行SSH命令需要主机列表
 		if len(hosts) == 0 {
@@ -78,7 +86,7 @@ func main() {
 		// 执行SQL查询
 		sql.ExecuteQuery(cfg, logWriter, cmdLogger)
 	} else {
-		fmt.Fprintf(os.Stderr, "No command, upload file or SQL query specified. Use -cmd, -upload-file and -upload-dir, or -sql\n")
+		fmt.Fprintf(os.Stderr, "No command, upload file, download file or SQL query specified. Use -cmd, -upload-file and -upload-dir, -remote-path and -local-path, or -sql\n")
 		os.Exit(1)
 	}
 }

@@ -191,3 +191,53 @@ func OutputUploadResultWithTimeout(host, status, localFile, remoteFile string, s
 		}
 	}
 }
+
+// OutputDownloadResult 输出下载文件结果
+func OutputDownloadResult(host, status, remotePath, localPath string, size int64, duration, errMsg, sshUser string, jsonOutput bool, writer io.Writer) {
+	if jsonOutput {
+		// JSON格式输出
+		result := map[string]interface{}{
+			"host":        host,
+			"type":        "download",
+			"status":      status,
+			"remote_path": remotePath,
+			"local_path":  localPath,
+			"size":        size,
+			"duration":    duration,
+			"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
+			"ssh_user":    sshUser,
+		}
+
+		if errMsg != "" {
+			result["error"] = errMsg
+		}
+
+		jsonData, _ := json.Marshal(result)
+		fmt.Fprintln(writer, string(jsonData))
+	} else {
+		// 普通文本输出
+		timeStr := time.Now().Format("2006-01-02 15:04:05")
+		if status == "success" {
+			// 计算文件大小单位
+			sizeStr := formatFileSize(size)
+			fmt.Fprintf(writer, "[%s] %s 成功下载文件 %s 到 %s (大小: %s, 用时: %s, 用户: %s)\n",
+				timeStr, host, remotePath, localPath, sizeStr, duration, sshUser)
+		} else {
+			fmt.Fprintf(writer, "[%s] %s 下载文件失败 %s -> %s (%s, 用户: %s)\n",
+				timeStr, host, remotePath, localPath, errMsg, sshUser)
+		}
+	}
+}
+
+// formatFileSize 格式化文件大小
+func formatFileSize(size int64) string {
+	if size < 1024 {
+		return fmt.Sprintf("%dB", size)
+	} else if size < 1024*1024 {
+		return fmt.Sprintf("%.1fKB", float64(size)/1024)
+	} else if size < 1024*1024*1024 {
+		return fmt.Sprintf("%.1fMB", float64(size)/(1024*1024))
+	} else {
+		return fmt.Sprintf("%.1fGB", float64(size)/(1024*1024*1024))
+	}
+}

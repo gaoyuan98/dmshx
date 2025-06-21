@@ -37,6 +37,12 @@ func Parse() *pkg.Config {
 	flag.StringVar(&config.UploadDir, "upload-dir", "", "Remote directory to upload file to")
 	flag.IntVar(&config.UploadPermission, "upload-perm", 0644, "Permission for uploaded file (octal, default 0644)")
 
+	// 文件下载相关参数
+	flag.StringVar(&config.RemotePath, "remote-path", "", "Remote file or directory to download")
+	flag.StringVar(&config.LocalPath, "local-path", "", "Local directory to save downloaded files")
+	flag.BoolVar(&config.VerifyMD5, "verify-md5", true, "Verify MD5 checksum of downloaded files")
+	flag.Int64Var(&config.BufferSize, "buffer-size", 32, "Buffer size for download in MB (default 32MB)")
+
 	// 数据库相关参数
 	flag.StringVar(&config.DBType, "db-type", "", "Database type: dm or oracle")
 	flag.StringVar(&config.DBHost, "db-host", "", "Database host")
