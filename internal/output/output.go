@@ -79,9 +79,9 @@ func OutputCmdResultComplete(host, status, stdout, stderr, cmdType, duration, er
 			fmt.Fprintf(writer, "超时设置: %s\n", result.TimeoutSetting)
 		}
 
-		// 处理输出中的Unicode转义序列，特别是箭头符号
-		stdout := pkg.UnescapeUnicode(pkg.CleanAnsiSequences(result.Stdout))
-		stderr := pkg.UnescapeUnicode(pkg.CleanAnsiSequences(result.Stderr))
+		// 处理输出中的ANSI控制序列和Unicode转义序列
+		stdout := pkg.CleanAndUnescapeText(result.Stdout)
+		stderr := pkg.CleanAndUnescapeText(result.Stderr)
 
 		fmt.Fprintf(writer, "Stdout: %s\nStderr: %s\nDuration: %s\n",
 			stdout, stderr, result.Duration)

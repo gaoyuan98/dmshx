@@ -97,9 +97,9 @@ func (l *Logger) LogCommand(result *pkg.CmdResult) {
 
 	fmt.Fprintf(logFile, "执行状态: %s\n", result.Status)
 	fmt.Fprintf(logFile, "执行耗时: %s\n", result.Duration)
-	// 处理输出中的Unicode转义序列，特别是箭头符号
-	stdout := pkg.UnescapeUnicode(pkg.CleanAnsiSequences(result.Stdout))
-	stderr := pkg.UnescapeUnicode(pkg.CleanAnsiSequences(result.Stderr))
+	// 处理输出中的ANSI控制序列和Unicode转义序列
+	stdout := pkg.CleanAndUnescapeText(result.Stdout)
+	stderr := pkg.CleanAndUnescapeText(result.Stderr)
 
 	fmt.Fprintf(logFile, "标准输出:\n%s\n", stdout)
 	if result.Stderr != "" {

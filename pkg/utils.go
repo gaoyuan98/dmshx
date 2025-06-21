@@ -43,3 +43,17 @@ func UnescapeUnicode(s string) string {
 		return string(rune(i))
 	})
 }
+
+// CleanAndUnescapeText 清理ANSI控制序列并将Unicode转义序列转换回普通字符
+// 此函数结合了CleanAnsiSequences和UnescapeUnicode的功能，用于一次性处理文本输出
+// 参数:
+//   - s: 需要处理的字符串
+//
+// 返回:
+//   - 处理后的字符串，已移除ANSI控制序列并转换Unicode转义序列
+func CleanAndUnescapeText(s string) string {
+	// 先清理ANSI控制序列
+	cleaned := CleanAnsiSequences(s)
+	// 再转换Unicode转义序列
+	return UnescapeUnicode(cleaned)
+}
