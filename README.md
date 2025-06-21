@@ -618,7 +618,7 @@ dmshx -host-file "hosts.txt" -user "root" -password "password" -remote-path "/va
 # 自己测试用
 ```
 
--host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ls -la"
+-host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ls -l /proc/1390/cwd"
 
 -host "192.168.112.168" -user "root" -password "gaoyuan123#" -upload-file "E:\go_code\dmshx\build_dmshx.bat" -upload-dir "/opt/"
 

@@ -52,12 +52,13 @@ func OutputCmdResultComplete(host, status, stdout, stderr, cmdType, duration, er
 	}
 
 	if jsonOutput {
-		jsonData, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error marshaling JSON: %v\n", err)
-			return
+		// 使用json.Encoder并禁用HTML转义，避免特殊字符如>被转义为\u003e
+		encoder := json.NewEncoder(writer)
+		encoder.SetEscapeHTML(false)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
 		}
-		fmt.Fprintln(writer, string(jsonData))
 	} else {
 		fmt.Fprintf(writer, "Host: %s\nType: %s\nStatus: %s\nTimestamp: %s\n",
 			result.Host, result.Type, result.Status, result.Timestamp)
@@ -78,8 +79,12 @@ func OutputCmdResultComplete(host, status, stdout, stderr, cmdType, duration, er
 			fmt.Fprintf(writer, "超时设置: %s\n", result.TimeoutSetting)
 		}
 
+		// 处理输出中的Unicode转义序列，特别是箭头符号
+		stdout := pkg.UnescapeUnicode(pkg.CleanAnsiSequences(result.Stdout))
+		stderr := pkg.UnescapeUnicode(pkg.CleanAnsiSequences(result.Stderr))
+
 		fmt.Fprintf(writer, "Stdout: %s\nStderr: %s\nDuration: %s\n",
-			pkg.CleanAnsiSequences(result.Stdout), pkg.CleanAnsiSequences(result.Stderr), result.Duration)
+			stdout, stderr, result.Duration)
 
 		if errMsg != "" {
 			fmt.Fprintf(writer, "Error: %s\n", errMsg)
@@ -110,12 +115,13 @@ func OutputSQLResultWithTimeout(host, status, dbType string, rows []interface{},
 	}
 
 	if jsonOutput {
-		jsonData, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error marshaling JSON: %v\n", err)
-			return
+		// 使用json.Encoder并禁用HTML转义，避免特殊字符如>被转义为\u003e
+		encoder := json.NewEncoder(writer)
+		encoder.SetEscapeHTML(false)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
 		}
-		fmt.Fprintln(writer, string(jsonData))
 	} else {
 		fmt.Fprintf(writer, "Host: %s\nType: sql\nDB: %s\nStatus: %s\nTimestamp: %s\n",
 			result.Host, result.DB, result.Status, result.Timestamp)
@@ -163,12 +169,13 @@ func OutputUploadResultWithTimeout(host, status, localFile, remoteFile string, s
 	}
 
 	if jsonOutput {
-		jsonData, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error marshaling JSON: %v\n", err)
-			return
+		// 使用json.Encoder并禁用HTML转义，避免特殊字符如>被转义为\u003e
+		encoder := json.NewEncoder(writer)
+		encoder.SetEscapeHTML(false)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
 		}
-		fmt.Fprintln(writer, string(jsonData))
 	} else {
 		fmt.Fprintf(writer, "Host: %s\nType: upload\nStatus: %s\nTimestamp: %s\n",
 			result.Host, result.Status, result.Timestamp)
@@ -212,8 +219,13 @@ func OutputDownloadResult(host, status, remotePath, localPath string, size int64
 			result["error"] = errMsg
 		}
 
-		jsonData, _ := json.Marshal(result)
-		fmt.Fprintln(writer, string(jsonData))
+		// 使用json.Encoder并禁用HTML转义，避免特殊字符如>被转义为\u003e
+		encoder := json.NewEncoder(writer)
+		encoder.SetEscapeHTML(false)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+		}
 	} else {
 		// 普通文本输出
 		timeStr := time.Now().Format("2006-01-02 15:04:05")

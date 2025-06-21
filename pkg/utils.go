@@ -8,10 +8,14 @@ package pkg
 
 import (
 	"regexp"
+	"strconv"
 )
 
 // 用于匹配ANSI控制序列的正则表达式 - 更全面的版本
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\[[0-9;]*[a-zA-Z]|\[[0-9]+G`)
+
+// 用于匹配Unicode转义序列的正则表达式，例如 \u003e
+var unicodeEscapeRegex = regexp.MustCompile(`\\u([0-9a-fA-F]{4})`)
 
 // CleanAnsiSequences 清理字符串中的所有ANSI控制序列
 func CleanAnsiSequences(s string) string {
@@ -22,4 +26,20 @@ func CleanAnsiSequences(s string) string {
 	//cleaned = strings.ReplaceAll(cleaned, "[ OK ]", "OK")
 
 	return cleaned
+}
+
+// UnescapeUnicode 将Unicode转义序列转换回普通字符
+func UnescapeUnicode(s string) string {
+	return unicodeEscapeRegex.ReplaceAllStringFunc(s, func(match string) string {
+		// 从 \uXXXX 中提取4位16进制数
+		hexStr := match[2:] // 去掉 \u 前缀
+		// 将16进制字符串转换为整数
+		i, err := strconv.ParseInt(hexStr, 16, 32)
+		if err != nil {
+			// 如果解析错误，保留原始字符串
+			return match
+		}
+		// 将整数转换为对应的Unicode字符
+		return string(rune(i))
+	})
 }
