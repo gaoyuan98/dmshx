@@ -16,10 +16,75 @@ import (
 	"dmshx/pkg"
 )
 
+// normalizeArgs 将命令行参数标准化为 -flag=value 格式
+func normalizeArgs() {
+	if len(os.Args) <= 1 {
+		return
+	}
+
+	// 创建一个新的参数列表，第一个元素是程序名称
+	newArgs := []string{os.Args[0]}
+
+	// 定义布尔类型的参数列表
+	boolFlags := map[string]bool{
+		"-version":            true,
+		"-v":                  true,
+		"-json-output":        true,
+		"-real-time":          true,
+		"-enable-utf8":        true,
+		"-enable-command-log": true,
+		"-verify-md5":         true,
+	}
+
+	for i := 1; i < len(os.Args); i++ {
+		arg := os.Args[i]
+
+		// 检查是否是以'-'开头的参数
+		if strings.HasPrefix(arg, "-") {
+			// 检查参数是否已经是 -flag=value 格式
+			if strings.Contains(arg, "=") {
+				newArgs = append(newArgs, arg)
+				continue
+			}
+
+			// 检查是否是布尔类型的参数
+			if _, ok := boolFlags[arg]; ok {
+				// 如果是最后一个参数或者下一个参数是以'-'开头，则视为布尔标志
+				if i+1 >= len(os.Args) || strings.HasPrefix(os.Args[i+1], "-") {
+					newArgs = append(newArgs, arg+"=true")
+				} else {
+					// 否则，将下一个参数视为值
+					value := os.Args[i+1]
+					newArgs = append(newArgs, arg+"="+value)
+					i++ // 跳过下一个参数，因为它已经被处理了
+				}
+			} else {
+				// 非布尔类型的参数，必须有值
+				if i+1 < len(os.Args) && !strings.HasPrefix(os.Args[i+1], "-") {
+					value := os.Args[i+1]
+					newArgs = append(newArgs, arg+"="+value)
+					i++ // 跳过下一个参数，因为它已经被处理了
+				} else {
+					// 如果没有值，则保持原样
+					newArgs = append(newArgs, arg)
+				}
+			}
+		} else {
+			// 非参数，保持原样
+			newArgs = append(newArgs, arg)
+		}
+	}
+
+	// 替换原始参数
+	os.Args = newArgs
+}
+
 // Parse 解析命令行参数
 func Parse() *pkg.Config {
-	config := &pkg.Config{}
+	// 标准化参数格式
+	normalizeArgs()
 
+	config := &pkg.Config{}
 	// SSH相关参数
 	flag.StringVar(&config.Hosts, "hosts", "", "Comma-separated list of hosts in format ip[:port]")
 	flag.StringVar(&config.Hosts, "host", "", "Single host in format ip[:port] (alias for -hosts)")

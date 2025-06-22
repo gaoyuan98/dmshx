@@ -83,55 +83,59 @@ go build -o dmshx ./cmd/dmshx
 ## 使用方法
 
 > **注意**：命令行参数使用Go标准flag包格式，使用单横线(`-`)作为参数前缀。
+> **参数语法规范**：为保持一致性，所有参数统一使用 `-flag=value` 格式（布尔值可以使用 `-flag` 表示true）。
 
 ### SSH命令执行
 
 ```bash
 # 使用密码在单台主机上执行命令
-dmshx -host "192.168.112.168" -port 22 -user "root" -password "gaoyuan123#" -cmd "cat /opt/dmdata/5236/DMDB/dm.ini"
+dmshx -host="192.168.112.168" -port=22 -user="root" -password="gaoyuan123#" -cmd="cat /opt/dmdata/5236/DMDB/dm.ini"
 
 # 使用私钥在多台主机上执行命令
-dmshx -hosts "192.168.1.10,192.168.1.11:2222" -user "root" -key "/path/to/id_rsa" -cmd "cat /etc/hosts" -timeout 30
+dmshx -hosts="192.168.1.10,192.168.1.11:2222" -user="root" -key="/path/to/id_rsa" -cmd="cat /etc/hosts" -timeout=30
 
 # 从文件读取主机列表
-dmshx -host-file "hosts.txt" -user "admin" -password "password" -cmd "uptime"
+dmshx -host-file="hosts.txt" -user="admin" -password="password" -cmd="uptime"
 
 # 以root用户连接，但以dmdba用户执行命令
-dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -password "rootpassword" -cmd "cat /opt/dmdata/5236/DMDB/dm.ini" -exec-user "dmdba"
+dmshx -hosts="192.168.1.10,192.168.1.11" -user="root" -password="rootpassword" -cmd="cat /opt/dmdata/5236/DMDB/dm.ini" -exec-user="dmdba"
 ```
 
 ### SQL查询执行
 
 ```bash
 # 达梦数据库查询
-dmshx -db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM V$INSTANCE" -timeout 60
+dmshx -db-type="dm" -db-host="192.168.112.168" -db-port=5236 -db-user="SYSDBA" -db-pass="Dameng123#" -sql="SELECT * FROM V$INSTANCE" -timeout=60
 
 # 设置查询超时
-dmshx -db-type "dm" -db-host "192.168.1.20" -db-user "SYSDBA" -db-pass "SYSDBA" -sql "SELECT * FROM LARGE_TABLE" -timeout 60
+dmshx -db-type="dm" -db-host="192.168.1.20" -db-user="SYSDBA" -db-pass="SYSDBA" -sql="SELECT * FROM LARGE_TABLE" -timeout=60
 
 # 执行不限制超时的查询（适用于大型报表查询）
-dmshx -db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM LARGE_TABLE JOIN ANOTHER_TABLE" -timeout 0
+dmshx -db-type="dm" -db-host="192.168.112.168" -db-port=5236 -db-user="SYSDBA" -db-pass="Dameng123#" -sql="SELECT * FROM LARGE_TABLE JOIN ANOTHER_TABLE" -timeout=0
 ```
 
 ### 输出格式控制
 
 ```bash
 # 输出为JSON格式（默认）
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -json-output
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -json-output=true
+
+# 输出为文本格式
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -json-output=false
 
 # 输出到日志文件
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -log-file "output.log"
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -log-file="output.log"
 
 # 关闭UTF-8编码（适用于特殊终端环境）
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -enable-utf8=false
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -enable-utf8=false
 
 # 启用命令执行日志记录并设置保留天数
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -cmd "ls -la" -enable-command-log -log-retention 30
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -enable-command-log=true -log-retention=30
 
-# 显示版本信息（使用短参数）
-dmshx -v
+# 启用实时输出（仅在非JSON模式下有效）
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -json-output=false -real-time=true
 
-# 显示版本信息（使用完整参数）
+# 显示版本信息
 dmshx -version
 ```
 
@@ -582,58 +586,47 @@ dmshx -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/d
 
 ```bash
 # 上传单个文件到远程主机
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -upload-file "/path/to/localfile.txt" -upload-dir "/opt/destination/"
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -upload-file="/path/to/local/file.txt" -upload-dir="/remote/directory"
 
-# 使用私钥上传文件到多台主机
-dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -key "/path/to/id_rsa" -upload-file "/path/to/localfile.txt" -upload-dir "/opt/destination/" -timeout 60
-
-# 设置上传文件的权限
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -upload-file "/path/to/script.sh" -upload-dir "/opt/scripts/" -upload-perm 0755
-
-# 从文件读取主机列表上传文件
-dmshx -host-file "hosts.txt" -user "root" -password "password" -upload-file "/path/to/config.conf" -upload-dir "/etc/app/"
+# 设置上传文件权限
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -upload-file="/path/to/local/file.txt" -upload-dir="/remote/directory" -upload-perm=0755
 ```
 
 ### 文件下载
 
 ```bash
-# 从远程主机下载单个文件
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -remote-path "/opt/source/file.txt" -local-path "/downloads/"
+# 下载远程文件到本地
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -remote-path="/path/to/remote/file.txt" -local-path="/local/directory"
 
-# 从远程主机下载整个目录
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -remote-path "/opt/source/dir" -local-path "/downloads/"
+# 下载整个目录，禁用MD5验证
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -remote-path="/path/to/remote/directory" -local-path="/local/directory" -verify-md5=false
 
-# 使用私钥从多台主机下载文件
-dmshx -hosts "192.168.1.10,192.168.1.11" -user "root" -key "/path/to/id_rsa" -remote-path "/opt/logs/app.log" -local-path "/backup/logs/" -timeout 60
-
-# 下载并验证MD5校验和
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -remote-path "/opt/important-data.zip" -local-path "/backup/" -verify-md5 true
-
-# 设置更大的缓冲区加速下载大文件
-dmshx -hosts "192.168.1.10" -user "root" -password "password" -remote-path "/opt/large-file.tar.gz" -local-path "/backup/" -buffer-size 100 -timeout 300
-
-# 从文件读取主机列表下载文件
-dmshx -host-file "hosts.txt" -user "root" -password "password" -remote-path "/var/log/syslog" -local-path "/backup/logs/"
-
-# 自己测试用
+# 设置更大的下载缓冲区
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -remote-path="/path/to/remote/file.txt" -local-path="/local/directory" -buffer-size=64
 ```
 
--host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "ls -l /proc/1390/cwd"
+### 输出格式控制
 
--host "192.168.112.168" -user "root" -password "gaoyuan123#" -upload-file "E:\go_code\dmshx\build_dmshx.bat" -upload-dir "/opt/"
+```bash
+# 输出为JSON格式（默认）
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -json-output=true
 
--host "192.168.112.168" -user "root" -password "gaoyuan123#" -remote-path "/opt/build_dmshx.bat" -local-path "E:\downloads\"
+# 输出为文本格式
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -json-output=false
 
-# 下载大文件并指定缓冲区大小
--hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -remote-path "/opt/dm_soft/DMDB_INSTALL_SCRIPTS/dm8_20240301_x86_kylin10_64_ent_8.1.3.26_pack26.iso" -local-path "E:\go_code\dmshx" -verify-md5 true -buffer-size 100
+# 输出到日志文件
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -log-file="output.log"
 
-# 禁用JSON输出以显示实时进度条
--hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -remote-path "/opt/dm_soft/DMDB_INSTALL_SCRIPTS/dm8_20240301_x86_kylin10_64_ent_8.1.3.26_pack26.iso" -local-path "E:\go_code\dmshx" -buffer-size 100 -json-output=false -verify-md5 true
+# 关闭UTF-8编码（适用于特殊终端环境）
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -enable-utf8=false
 
+# 启用命令执行日志记录并设置保留天数
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -enable-command-log=true -log-retention=30
 
--host 192.168.112.169 -user root -password gaoyuan123# -timeout 5 -port 22 -cmd "/opt/dmdbms/bin/DmWatcherServiceDM02 restart" -json-output=false -real-time
+# 启用实时输出（仅在非JSON模式下有效）
+dmshx -hosts="192.168.1.10" -user="root" -password="password" -cmd="ls -la" -json-output=false -real-time=true
 
--db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM V$INSTANCE" -timeout 60
-
-
+# 显示版本信息
+dmshx -version
 ```
+
