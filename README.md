@@ -630,7 +630,8 @@ dmshx -host-file "hosts.txt" -user "root" -password "password" -remote-path "/va
 # 禁用JSON输出以显示实时进度条
 -hosts "192.168.112.168" -user "root" -password "gaoyuan123#" -remote-path "/opt/dm_soft/DMDB_INSTALL_SCRIPTS/dm8_20240301_x86_kylin10_64_ent_8.1.3.26_pack26.iso" -local-path "E:\go_code\dmshx" -buffer-size 100 -json-output=false -verify-md5 true
 
--host "192.168.112.168" -user "root" -password "gaoyuan123#" -cmd "/opt/dmdbms/bin/DmServiceDM01 restart" -exec-user "dmdba" -json-output=false -real-time
+
+-host 192.168.112.169 -user root -password gaoyuan123# -timeout 5 -port 22 -cmd "/opt/dmdbms/bin/DmWatcherServiceDM02 restart" -json-output=false -real-time
 
 -db-type "dm" -db-host "192.168.112.168" -db-port 5236 -db-user "SYSDBA" -db-pass "Dameng123#" -sql "SELECT * FROM V$INSTANCE" -timeout 60
 

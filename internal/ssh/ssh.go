@@ -252,10 +252,9 @@ func ExecuteCommands(hosts []string, config *pkg.Config, logWriter io.Writer, cm
 			// 如果是实时输出模式，在结束时显示完成信息
 			if !config.JSONOutput && config.RealTimeOutput {
 				fmt.Printf("命令执行完成 [%s]: %s (耗时: %s)\n", host, cmdToExecute, duration)
-				fmt.Println("----------------------------------------")
+			} else {
+				output.OutputCmdResultComplete(host, status, stdout.String(), stderr.String(), "cmd", duration, errMsg, config.User, execUser, cmdToExecute, timeoutSetting, config.JSONOutput, logWriter)
 			}
-
-			output.OutputCmdResultComplete(host, status, stdout.String(), stderr.String(), "cmd", duration, errMsg, config.User, execUser, cmdToExecute, timeoutSetting, config.JSONOutput, logWriter)
 		}(host)
 	}
 
